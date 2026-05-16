@@ -28,7 +28,7 @@ Open `http://localhost:5174` and sign in with your Autoconnecto user.
 
 ## Android APK (Capacitor)
 
-Prerequisites: Node 20+, Android Studio, JDK 17.
+Prerequisites: Node 20+, Android Studio, JDK 21.
 
 ```bash
 npm install

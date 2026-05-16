@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -50,4 +53,14 @@ jobs:
           files: android/app/build/outputs/apk/debug/app-debug.apk
           name: Autoconnecto Mobile ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            ## Autoconnecto Mobile ${{ github.ref_name }}
+
+            Android debug APK for field monitoring: live telemetry and alarms (ack/clear).
+
+            **Install:** download `app-debug.apk`, allow installs from unknown sources, open the APK.
+
+            **Sign-in:** same Cognito account as [app.autoconnecto.in](https://app.autoconnecto.in).
+
+            **API:** production (`api.autoconnecto.in`).
