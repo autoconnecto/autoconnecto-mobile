@@ -1,4 +1,4 @@
-name: Android APK (debug)
+name: Android APK (release)
 
 on:
   push:
@@ -32,35 +32,41 @@ jobs:
           java-version: "21"
 
       - name: Capacitor sync Android
-        run: |
-          npx cap add android || true
-          npx cap sync android
+        run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
+
+      - name: Rename APK for release
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk \
+            "autoconnecto-mobile-${GITHUB_REF_NAME}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: autoconnecto-mobile-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: autoconnecto-mobile-release-apk
+          path: autoconnecto-mobile-*.apk
 
       - name: Create GitHub Release (tag pushes)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: autoconnecto-mobile-*.apk
           name: Autoconnecto Mobile ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           generate_release_notes: false
           body: |
             ## Autoconnecto Mobile ${{ github.ref_name }}
 
-            Android debug APK for field monitoring: live telemetry and alarms (ack/clear).
+            Android APK for field monitoring: live telemetry and alarms (ack/clear).
 
-            **Install:** download `app-debug.apk`, allow installs from unknown sources, open the APK.
-
-            **Sign-in:** same Cognito account as [app.autoconnecto.in](https://app.autoconnecto.in).
+            ### Install on your phone
+            1. Download **`autoconnecto-mobile-*.apk`** (not a `.zip`).
+            2. Open **Files** or **Downloads** and tap the APK (Chrome’s download chip often does not install).
+            3. Allow **Install unknown apps** for Files/Chrome if prompted.
+            4. If Play Protect warns, tap **Install anyway** / **More details** → **Install anyway**.
+            5. Sign in with the same account as [app.autoconnecto.in](https://app.autoconnecto.in).
 
             **API:** production (`api.autoconnecto.in`).

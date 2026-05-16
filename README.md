@@ -40,11 +40,19 @@ npm run cap:open:android
 
 In Android Studio: **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
 
-Install the APK from [GitHub Releases](https://github.com/autoconnecto/autoconnecto-mobile/releases) (ThingsBoard-style distribution for v1).
+Install the APK from [GitHub Releases](https://github.com/autoconnecto/autoconnecto-mobile/releases).
+
+### Phone install (if download works but install fails)
+
+1. After download, open **Files** or **Downloads** and tap the `.apk` file (do not rely only on Chrome’s download notification).
+2. Enable **Install unknown apps** for **Files** or **Chrome** (Settings → Apps → special access).
+3. If **Google Play Protect** appears, choose **Install anyway** (or **More details** → **Install anyway**).
+4. If you see **App not installed**, uninstall any older test build of Autoconnecto Mobile, then retry.
+5. Use the latest release APK (`autoconnecto-mobile-v*.apk`), not `app-debug.apk` from older builds.
 
 ## CI
 
-`.github/workflows/release-android.yml` builds a debug APK on tagged releases (`v*`). Upload the signed release APK manually until signing secrets are configured.
+`.github/workflows/release-android.yml` builds a release APK on tagged releases (`v*`).
 
 ## Future
 
