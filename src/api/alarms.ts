@@ -45,8 +45,7 @@ function normalizeAlarm(row: Record<string, unknown>): AlarmRow {
   };
 }
 
-export async function fetchAlarms(): Promise<AlarmRow[]> {
-  const { data } = await api.get("/alarms");
+function parseAlarmList(data: unknown): AlarmRow[] {
   const rows = Array.isArray(data)
     ? data
     : Array.isArray((data as { items?: unknown[] })?.items)
@@ -55,6 +54,18 @@ export async function fetchAlarms(): Promise<AlarmRow[]> {
   return rows
     .map((row) => normalizeAlarm(row as Record<string, unknown>))
     .filter((row) => row.alarm_id.length > 0);
+}
+
+export async function fetchAlarms(): Promise<AlarmRow[]> {
+  const { data } = await api.get("/alarms");
+  return parseAlarmList(data);
+}
+
+export async function fetchAlarmsForDevice(
+  deviceId: string
+): Promise<AlarmRow[]> {
+  const { data } = await api.get(`/alarms/device/${deviceId}`);
+  return parseAlarmList(data);
 }
 
 export async function ackAlarm(alarmId: string) {

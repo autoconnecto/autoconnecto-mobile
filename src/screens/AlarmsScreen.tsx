@@ -1,11 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ackAlarm,
   clearAlarm,
   fetchAlarms,
   type AlarmRow,
 } from "../api/alarms";
+import { PullRefresh } from "../components/PullRefresh";
 import { getSocket } from "../realtime/socket";
+import {
+  filterAlarms,
+  type AlarmListFilters,
+  type AlarmSeverityFilter,
+  type AlarmStatusFilter,
+} from "../utils/alarmFilters";
+import { formatTs } from "../utils/format";
+
+type Props = {
+  initialSeverity?: AlarmSeverityFilter;
+  deviceIdFilter?: string;
+};
 
 function severityClass(severity?: string) {
   const s = (severity || "").toLowerCase();
@@ -15,16 +28,20 @@ function severityClass(severity?: string) {
   return "severity-default";
 }
 
-function formatTs(ts?: number | null) {
-  if (!ts) return "";
-  return new Date(ts).toLocaleString();
-}
-
-export function AlarmsScreen() {
+export function AlarmsScreen({
+  initialSeverity = "all",
+  deviceIdFilter,
+}: Props) {
   const [alarms, setAlarms] = useState<AlarmRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [severity, setSeverity] = useState<AlarmSeverityFilter>(initialSeverity);
+  const [status, setStatus] = useState<AlarmStatusFilter>("active");
+
+  useEffect(() => {
+    setSeverity(initialSeverity);
+  }, [initialSeverity]);
 
   const load = useCallback(async () => {
     setError("");
@@ -55,6 +72,20 @@ export function AlarmsScreen() {
     };
   }, [load]);
 
+  const filters: AlarmListFilters = useMemo(
+    () => ({
+      severity,
+      status,
+      deviceId: deviceIdFilter,
+    }),
+    [severity, status, deviceIdFilter]
+  );
+
+  const visible = useMemo(
+    () => filterAlarms(alarms, filters),
+    [alarms, filters]
+  );
+
   async function onAck(alarm: AlarmRow) {
     setBusyId(alarm.alarm_id);
     try {
@@ -72,26 +103,79 @@ export function AlarmsScreen() {
     try {
       await clearAlarm(alarm.alarm_id);
       await load();
-    } catch {
-      setError("Clear failed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Clear failed");
     } finally {
       setBusyId(null);
     }
   }
 
-  const active = alarms.filter(
-    (a) => (a.status || "").toUpperCase() !== "CLEARED"
-  );
-
   return (
-    <div className="screen tab-screen">
+    <PullRefresh
+      className="screen tab-screen"
+      onRefresh={async () => {
+        setLoading(true);
+        await load();
+      }}
+    >
+      {deviceIdFilter ? (
+        <p className="muted small filter-hint">
+          Filtered to device {deviceIdFilter}
+        </p>
+      ) : null}
+
+      <div className="chip-row">
+        {(["all", "critical", "major", "minor"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`chip ${severity === key ? "active" : ""}`}
+            onClick={() => setSeverity(key)}
+          >
+            {key === "all" ? "All severities" : key}
+          </button>
+        ))}
+      </div>
+
+      <div className="chip-row">
+        {(["active", "cleared", "all"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`chip ${status === key ? "active" : ""}`}
+            onClick={() => setStatus(key)}
+          >
+            {key === "active"
+              ? "Active"
+              : key === "cleared"
+                ? "Cleared"
+                : "All status"}
+          </button>
+        ))}
+      </div>
+
+      <div className="toolbar-row">
+        <button
+          type="button"
+          className="btn small secondary"
+          onClick={() => {
+            setLoading(true);
+            void load();
+          }}
+        >
+          Refresh
+        </button>
+        <span className="muted small">{visible.length} shown</span>
+      </div>
+
       {loading ? <p className="muted center">Loading…</p> : null}
       {error ? <p className="error center">{error}</p> : null}
-      {!loading && active.length === 0 ? (
-        <p className="muted center">No active alarms.</p>
+      {!loading && visible.length === 0 ? (
+        <p className="muted center">No alarms match your filters.</p>
       ) : null}
+
       <ul className="card-list">
-        {active.map((alarm) => {
+        {visible.map((alarm) => {
           const busy = busyId === alarm.alarm_id;
           const acknowledged = Boolean(alarm.acknowledged);
           return (
@@ -139,6 +223,6 @@ export function AlarmsScreen() {
           );
         })}
       </ul>
-    </div>
+    </PullRefresh>
   );
 }

@@ -1,40 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchLatestTelemetry,
-  type DeviceRow,
   type TelemetrySnapshot,
 } from "../api/devices";
-import { DevicePicker } from "../components/DevicePicker";
-import { LAST_DEVICE_KEY } from "../config/env";
 import {
   telemetryStore,
   type LiveTelemetryPoint,
 } from "../realtime/telemetry.store";
+import { formatTs, formatValue } from "../utils/format";
 
 type Props = {
   deviceId: string;
-  devices: DeviceRow[];
-  onDeviceChange: (id: string) => void;
-  devicesLoading: boolean;
+  compact?: boolean;
 };
 
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return "—";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-}
-
-function formatTs(ts?: number): string {
-  if (!ts) return "";
-  return new Date(ts).toLocaleString();
-}
-
-export function TelemetryScreen({
-  deviceId,
-  devices,
-  onDeviceChange,
-  devicesLoading,
-}: Props) {
+export function TelemetryList({ deviceId, compact }: Props) {
   const [snapshot, setSnapshot] = useState<TelemetrySnapshot>({});
   const [live, setLive] = useState<Record<string, LiveTelemetryPoint>>({});
   const [loading, setLoading] = useState(false);
@@ -87,20 +67,18 @@ export function TelemetryScreen({
       });
   }, [snapshot, live]);
 
+  if (!deviceId) {
+    return <p className="muted center">No device selected.</p>;
+  }
+
   return (
-    <div className="screen tab-screen">
-      <DevicePicker
-        value={deviceId}
-        onChange={onDeviceChange}
-        devices={devices}
-        loading={devicesLoading}
-      />
-      {loading ? <p className="muted center">Loading…</p> : null}
+    <>
+      {loading ? <p className="muted center">Loading telemetry…</p> : null}
       {error ? <p className="error center">{error}</p> : null}
       {!loading && rows.length === 0 ? (
         <p className="muted center">No telemetry keys for this device.</p>
       ) : null}
-      <ul className="card-list">
+      <ul className={`card-list ${compact ? "compact" : ""}`}>
         {rows.map((row) => (
           <li key={row.key} className="card">
             <div className="card-row">
@@ -114,22 +92,6 @@ export function TelemetryScreen({
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
-}
-
-export function readLastDeviceId(): string {
-  try {
-    return localStorage.getItem(LAST_DEVICE_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
-export function saveLastDeviceId(id: string) {
-  try {
-    if (id) localStorage.setItem(LAST_DEVICE_KEY, id);
-  } catch {
-    /* ignore */
-  }
 }
