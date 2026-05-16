@@ -43,3 +43,19 @@ export async function loadDeviceList(): Promise<DeviceRow[]> {
   const list = await fetchDevices();
   return list.filter((d) => getDeviceId(d).length > 0);
 }
+
+export type DeviceLoadResult = {
+  devices: DeviceRow[];
+  error: string | null;
+};
+
+export async function loadDeviceListWithStatus(): Promise<DeviceLoadResult> {
+  try {
+    const devices = await loadDeviceList();
+    return { devices, error: null };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to load devices";
+    return { devices: [], error: message };
+  }
+}

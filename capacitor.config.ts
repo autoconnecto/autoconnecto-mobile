@@ -7,6 +7,13 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: "https",
   },
+  plugins: {
+    // Required: WebView origin is https://localhost — browser CORS blocks API calls
+    // unless requests go through the native HTTP stack.
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
 };
 
 export default config;

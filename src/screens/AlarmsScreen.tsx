@@ -31,8 +31,10 @@ export function AlarmsScreen() {
     try {
       const rows = await fetchAlarms();
       setAlarms(rows);
-    } catch {
-      setError("Failed to load alarms");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load alarms"
+      );
     } finally {
       setLoading(false);
     }

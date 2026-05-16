@@ -44,4 +44,27 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const url = error?.config?.url;
+    if (status === 401) {
+      return Promise.reject(
+        new Error("Session expired. Sign out and sign in again.")
+      );
+    }
+    if (!error?.response) {
+      return Promise.reject(
+        new Error(
+          `Cannot reach API (${API_BASE_URL}). Check network connection.`
+        )
+      );
+    }
+    return Promise.reject(
+      new Error(`API error ${status ?? "?"} on ${url ?? "request"}`)
+    );
+  }
+);
+
 export default api;

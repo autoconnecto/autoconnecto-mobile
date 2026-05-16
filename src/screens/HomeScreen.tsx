@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getDeviceId, type DeviceRow } from "../api/devices";
-import { loadDeviceList } from "../components/DevicePicker";
+import { loadDeviceListWithStatus } from "../components/DevicePicker";
 import { AlarmsScreen } from "./AlarmsScreen";
 import {
   readLastDeviceId,
@@ -16,11 +16,13 @@ export function HomeScreen() {
   const [tab, setTab] = useState<Tab>("telemetry");
   const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
+  const [devicesError, setDevicesError] = useState("");
   const [deviceId, setDeviceId] = useState(readLastDeviceId);
 
   useEffect(() => {
-    loadDeviceList()
-      .then((list) => {
+    loadDeviceListWithStatus()
+      .then(({ devices: list, error }) => {
+        setDevicesError(error || "");
         setDevices(list);
         const ids = list.map(getDeviceId).filter(Boolean);
         setDeviceId((current) => {
@@ -68,6 +70,9 @@ export function HomeScreen() {
       </nav>
 
       <main className="app-main">
+        {devicesError ? (
+          <p className="error center tab-screen">{devicesError}</p>
+        ) : null}
         {tab === "telemetry" ? (
           <TelemetryScreen
             deviceId={deviceId}
