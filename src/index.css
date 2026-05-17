@@ -545,3 +545,89 @@ body {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
+
+.tab-bar .tab {
+  padding: 12px 8px;
+  font-size: 0.8rem;
+}
+
+.tab-compact {
+  letter-spacing: -0.02em;
+}
+
+.dash-view {
+  padding-bottom: 24px;
+}
+
+.dash-widget-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.dash-widget {
+  margin: 0;
+}
+
+.dash-big-value {
+  margin: 8px 0 4px;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.dash-unit {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dash-metric-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.dash-metric-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-metric-list li:last-child {
+  border-bottom: none;
+}
+
+.dash-metric-key {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dash-metric-value {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-alarm-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dash-alarm-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-alarm-text {
+  font-size: 0.9rem;
+}

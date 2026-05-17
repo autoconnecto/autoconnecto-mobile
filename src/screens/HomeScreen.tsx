@@ -6,9 +6,11 @@ import type { AlarmSeverityFilter } from "../utils/alarmFilters";
 import { AlarmsScreen } from "./AlarmsScreen";
 import { DeviceDetailScreen } from "./DeviceDetailScreen";
 import { DevicesListScreen } from "./DevicesListScreen";
+import { DashboardListScreen } from "./DashboardListScreen";
+import { DashboardViewScreen } from "./DashboardViewScreen";
 import { SummaryScreen } from "./SummaryScreen";
 
-type Tab = "home" | "devices" | "alarms";
+type Tab = "home" | "devices" | "dashboards" | "alarms";
 
 export function HomeScreen() {
   const { email, logout } = useAuth();
@@ -17,6 +19,9 @@ export function HomeScreen() {
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [devicesError, setDevicesError] = useState("");
   const [detailDeviceId, setDetailDeviceId] = useState<string | null>(null);
+  const [detailDashboardId, setDetailDashboardId] = useState<string | null>(
+    null
+  );
   const [alarmsSeverity, setAlarmsSeverity] =
     useState<AlarmSeverityFilter>("all");
   const [alarmsDeviceId, setAlarmsDeviceId] = useState<string | undefined>();
@@ -50,6 +55,19 @@ export function HomeScreen() {
     setAlarmsDeviceId(opts?.deviceId);
     setTab("alarms");
     setDetailDeviceId(null);
+    setDetailDashboardId(null);
+  }
+
+  if (detailDashboardId) {
+    return (
+      <div className="app-shell">
+        <DashboardViewScreen
+          dashboardId={detailDashboardId}
+          devices={devices}
+          onBack={() => setDetailDashboardId(null)}
+        />
+      </div>
+    );
   }
 
   if (detailDeviceId) {
@@ -94,6 +112,13 @@ export function HomeScreen() {
         </button>
         <button
           type="button"
+          className={`tab tab-compact ${tab === "dashboards" ? "active" : ""}`}
+          onClick={() => setTab("dashboards")}
+        >
+          Boards
+        </button>
+        <button
+          type="button"
           className={`tab ${tab === "alarms" ? "active" : ""}`}
           onClick={() => setTab("alarms")}
         >
@@ -127,6 +152,14 @@ export function HomeScreen() {
             devices={devices}
             loading={devicesLoading}
             onSelectDevice={openDevice}
+          />
+        ) : null}
+        {tab === "dashboards" ? (
+          <DashboardListScreen
+            onOpenDashboard={(id) => {
+              setDetailDashboardId(id);
+              setDetailDeviceId(null);
+            }}
           />
         ) : null}
         {tab === "alarms" ? (
