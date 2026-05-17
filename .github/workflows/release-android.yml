@@ -60,7 +60,7 @@ jobs:
           body: |
             ## Autoconnecto Mobile ${{ github.ref_name }}
 
-            Android APK for field monitoring: live telemetry and alarms (ack/clear).
+            Android APK for field monitoring: dashboards (charts + gauges), live telemetry, and alarms (ack/clear).
 
             ### Install on your phone
             1. Download **`autoconnecto-mobile-*.apk`** (not a `.zip`).

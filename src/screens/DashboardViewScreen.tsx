@@ -5,6 +5,7 @@ import {
 } from "../api/dashboards";
 import { getDeviceId, type DeviceRow } from "../api/devices";
 import { DevicePicker } from "../components/DevicePicker";
+import { MobileDashboardClockProvider } from "../dashboard/context/MobileDashboardClock";
 import { getWidgetsForState } from "../dashboard/dashboardLayout";
 import { MobileWidget } from "../dashboard/MobileWidget";
 import { dashboardNeedsDevicePicker } from "../dashboard/widgetResolver";
@@ -116,6 +117,7 @@ export function DashboardViewScreen({
       {error ? <p className="error center tab-screen">{error}</p> : null}
 
       {!loading && dashboard ? (
+        <MobileDashboardClockProvider dashboard={dashboard}>
         <div className="tab-screen dash-view">
           {needsDevice ? (
             <DevicePicker
@@ -160,6 +162,7 @@ export function DashboardViewScreen({
             )}
           </div>
         </div>
+        </MobileDashboardClockProvider>
       ) : null}
     </div>
   );

@@ -1,9 +1,36 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { fetchAlarms, type AlarmRow } from "../api/alarms";
 import { type DeviceRow } from "../api/devices";
-import { formatTs, formatValue, isDeviceActive } from "../utils/format";
+import { formatValue, isDeviceActive } from "../utils/format";
+import { WidgetShell } from "./components/WidgetShell";
 import { useDeviceTelemetry } from "./useDeviceTelemetry";
 import { resolveWidgetConfig } from "./widgetResolver";
+import { BarChartWidgetMobile } from "./widgets/charts/BarChartWidget";
+import { DoughnutChartWidgetMobile } from "./widgets/charts/DoughnutChartWidget";
+import { MultiTimeseriesChartWidget } from "./widgets/charts/MultiTimeseriesChartWidget";
+import { PieChartWidgetMobile } from "./widgets/charts/PieChartWidget";
+import { SparklineChartWidget } from "./widgets/charts/SparklineChartWidget";
+import { TimeseriesChartWidget } from "./widgets/charts/TimeseriesChartWidget";
+import { GaugeWidgetMobile } from "./widgets/GaugeWidgetMobile";
+import type { MobileWidgetBindings } from "./hooks/useMobileWidgetBindings";
+
+const CHART_WIDGET_TYPES = new Set([
+  "timeseries",
+  "multitimeseries",
+  "barChart",
+  "pieChart",
+  "doughnut",
+  "sparkline",
+]);
+
+const CHART_WIDGET_COMPONENTS: Record<string, ComponentType<MobileWidgetBindings>> = {
+  timeseries: TimeseriesChartWidget,
+  multitimeseries: MultiTimeseriesChartWidget,
+  barChart: BarChartWidgetMobile,
+  pieChart: PieChartWidgetMobile,
+  doughnut: DoughnutChartWidgetMobile,
+  sparkline: SparklineChartWidget,
+};
 
 const ALARM_TYPES = new Set(["alarm", "deviceAlarm", "alarmSummary"]);
 const GAUGE_TYPES = new Set([
@@ -24,16 +51,11 @@ const VALUE_TYPES = new Set([
   "led",
   "miniLed",
   "kpiStatCard",
-  "sparkline",
-  "timeseries",
-  "multitimeseries",
   "trendDirection",
   "deltaComparison",
 ]);
-const CHART_TYPES = new Set([
-  "barChart",
-  "pieChart",
-  "doughnut",
+
+const WEB_PLACEHOLDER_TYPES = new Set([
   "rangeChart",
   "dualAxisChart",
   "scatterTelemetry",
@@ -41,35 +63,13 @@ const CHART_TYPES = new Set([
   "ecgStrip",
   "map",
   "routeMap",
+  "deviceTable",
+  "navigationButton",
 ]);
 
-type Props = {
-  widget: Record<string, unknown>;
-  aliases: Record<string, unknown>[];
-  dashboardContext: Record<string, unknown>;
-  selectedDeviceId: string;
+type Props = MobileWidgetBindings & {
   devices: DeviceRow[];
 };
-
-function WidgetShell({
-  title,
-  children,
-  hint,
-}: {
-  title: string;
-  children: React.ReactNode;
-  hint?: string;
-}) {
-  return (
-    <article className="dash-widget card">
-      <div className="card-row">
-        <span className="card-title">{title}</span>
-        {hint ? <span className="badge live">{hint}</span> : null}
-      </div>
-      {children}
-    </article>
-  );
-}
 
 function severityClass(severity?: string) {
   const s = (severity || "").toLowerCase();
@@ -79,7 +79,13 @@ function severityClass(severity?: string) {
   return "severity-default";
 }
 
-function MobileAlarmList({ alarms, limit = 5 }: { alarms: AlarmRow[]; limit?: number }) {
+function MobileAlarmList({
+  alarms,
+  limit = 5,
+}: {
+  alarms: AlarmRow[];
+  limit?: number;
+}) {
   const active = alarms
     .filter((a) => String(a.status || "").toUpperCase() !== "CLEARED")
     .slice(0, limit);
@@ -112,6 +118,22 @@ export function MobileWidget({
   devices,
 }: Props) {
   const type = String(widget.type || "unknown");
+  const bindings: MobileWidgetBindings = {
+    widget,
+    aliases,
+    dashboardContext,
+    selectedDeviceId,
+  };
+
+  const ChartComponent = CHART_WIDGET_COMPONENTS[type];
+  if (ChartComponent && CHART_WIDGET_TYPES.has(type)) {
+    return <ChartComponent {...bindings} />;
+  }
+
+  if (GAUGE_TYPES.has(type) || VALUE_TYPES.has(type)) {
+    return <GaugeWidgetMobile {...bindings} />;
+  }
+
   const title = String(widget.name || widget.title || type);
   const config = (widget.config || {}) as Record<string, unknown>;
   const state = {
@@ -144,7 +166,15 @@ export function MobileWidget({
   }
 
   if (ALARM_TYPES.has(type)) {
-    return <MobileAlarmWidget title={title} widget={widget} aliases={aliases} dashboardContext={dashboardContext} state={state} />;
+    return (
+      <MobileAlarmWidget
+        title={title}
+        widget={widget}
+        aliases={aliases}
+        dashboardContext={dashboardContext}
+        state={state}
+      />
+    );
   }
 
   const resolved = resolveWidgetConfig(
@@ -163,12 +193,10 @@ export function MobileWidget({
   }
 
   if (resolved.status === "not_configured") {
-    if (CHART_TYPES.has(type) || type === "deviceTable" || type === "navigationButton") {
+    if (WEB_PLACEHOLDER_TYPES.has(type)) {
       return (
         <WidgetShell title={title}>
-          <p className="muted small">
-            This widget is best viewed on the web app.
-          </p>
+          <p className="muted small">This widget is best viewed on the web app.</p>
         </WidgetShell>
       );
     }
@@ -176,12 +204,7 @@ export function MobileWidget({
   }
 
   return (
-    <MobileTelemetryWidget
-      title={title}
-      type={type}
-      resolved={resolved}
-      config={config}
-    />
+    <MobileTelemetryWidget title={title} resolved={resolved} />
   );
 }
 
@@ -222,27 +245,28 @@ function MobileAlarmWidget({
 
   return (
     <WidgetShell title={title} hint={activeCount ? `${activeCount} active` : undefined}>
-      <MobileAlarmList alarms={alarms} limit={String(widget.type) === "alarmSummary" ? 8 : 5} />
+      <MobileAlarmList
+        alarms={alarms}
+        limit={String(widget.type) === "alarmSummary" ? 8 : 5}
+      />
     </WidgetShell>
   );
 }
 
 function MobileTelemetryWidget({
   title,
-  type,
   resolved,
-  config,
 }: {
   title: string;
-  type: string;
   resolved: ReturnType<typeof resolveWidgetConfig>;
-  config: Record<string, unknown>;
 }) {
   const deviceId = resolved.primaryDeviceId;
-  const keys = resolved.metrics.length ? resolved.metrics : resolved.metric ? [resolved.metric] : [];
+  const keys = resolved.metrics.length
+    ? resolved.metrics
+    : resolved.metric
+      ? [resolved.metric]
+      : [];
   const telemetry = useDeviceTelemetry(deviceId, keys);
-  const unit = String(config.unit || config.units || "");
-  const decimals = Number(config.decimals ?? config.precision ?? 2);
 
   const rows = useMemo(() => {
     return keys.map((key) => {
@@ -255,36 +279,6 @@ function MobileTelemetryWidget({
       };
     });
   }, [keys, telemetry]);
-
-  const primary = rows[0];
-  const showChartHint = CHART_TYPES.has(type) || type === "timeseries" || type === "multitimeseries";
-
-  if (VALUE_TYPES.has(type) || GAUGE_TYPES.has(type)) {
-    const display =
-      primary?.value !== undefined && primary?.value !== null
-        ? typeof primary.value === "number"
-          ? primary.value.toFixed(decimals)
-          : formatValue(primary.value)
-        : "—";
-
-    return (
-      <WidgetShell title={title} hint={primary?.live ? "live" : undefined}>
-        <p className="dash-big-value">
-          {display}
-          {unit ? <span className="dash-unit"> {unit}</span> : null}
-        </p>
-        {primary?.key ? (
-          <p className="card-meta">{primary.key}</p>
-        ) : null}
-        {primary?.ts ? (
-          <p className="card-meta">{formatTs(primary.ts)}</p>
-        ) : null}
-        {showChartHint ? (
-          <p className="muted small">Full chart available on web</p>
-        ) : null}
-      </WidgetShell>
-    );
-  }
 
   if (rows.length <= 1) {
     return (
