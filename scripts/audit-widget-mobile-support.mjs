@@ -33,6 +33,8 @@ const CHART_RENDERED = [
   "sparkline",
 ];
 
+const CONTROL_RENDERED = ["switch", "miniSwitch"];
+
 const GAUGE_RENDERED = [
   "gauge",
   "multigauge",
@@ -60,6 +62,7 @@ function classify(type) {
   if (SPECIAL.includes(type)) return "full";
   if (ALARM.includes(type)) return "alarms";
   if (CHART_RENDERED.includes(type)) return "chart-rendered";
+  if (CONTROL_RENDERED.includes(type)) return "control-rendered";
   if (GAUGE_RENDERED.includes(type)) return "gauge-rendered";
   if (VALUE.includes(type) || GAUGE.includes(type)) return "telemetry-card";
   if (CHART.includes(type)) return "web-placeholder";

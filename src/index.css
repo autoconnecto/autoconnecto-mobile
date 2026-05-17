@@ -798,3 +798,138 @@ body {
 .gauge-visual--neon .gauge-value-text {
   color: #0e7490;
 }
+
+.switch-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.switch-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.switch-row-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.switch-state {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.switch-state.on {
+  color: #16a34a;
+}
+
+.switch-state.off {
+  color: var(--muted);
+}
+
+.switch-toggle {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  border: none;
+  border-radius: 999px;
+  background: #cbd5e1;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.switch-toggle.is-on {
+  background: #22c55e;
+}
+
+.switch-toggle.is-pending {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.switch-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.switch-toggle.is-on .switch-toggle-thumb {
+  transform: translateX(22px);
+}
+
+.mini-switch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mini-switch-grid--column {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.mini-switch-grid--row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.mini-switch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.mini-switch-chip.is-on {
+  border-color: #86efac;
+  background: #ecfdf5;
+}
+
+.mini-switch-chip.is-pending {
+  opacity: 0.6;
+}
+
+.mini-switch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.mini-switch-chip.is-on .mini-switch-dot {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.mini-switch-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+}

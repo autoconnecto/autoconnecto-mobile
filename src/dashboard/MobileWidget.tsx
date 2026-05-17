@@ -12,6 +12,10 @@ import { PieChartWidgetMobile } from "./widgets/charts/PieChartWidget";
 import { SparklineChartWidget } from "./widgets/charts/SparklineChartWidget";
 import { TimeseriesChartWidget } from "./widgets/charts/TimeseriesChartWidget";
 import { GaugeWidgetMobile } from "./widgets/GaugeWidgetMobile";
+import {
+  ControlWidgetMobile,
+  isControlWidgetType,
+} from "./widgets/ControlWidgetMobile";
 import type { MobileWidgetBindings } from "./hooks/useMobileWidgetBindings";
 
 const CHART_WIDGET_TYPES = new Set([
@@ -128,6 +132,10 @@ export function MobileWidget({
   const ChartComponent = CHART_WIDGET_COMPONENTS[type];
   if (ChartComponent && CHART_WIDGET_TYPES.has(type)) {
     return <ChartComponent {...bindings} />;
+  }
+
+  if (isControlWidgetType(type)) {
+    return <ControlWidgetMobile {...bindings} />;
   }
 
   if (GAUGE_TYPES.has(type) || VALUE_TYPES.has(type)) {
