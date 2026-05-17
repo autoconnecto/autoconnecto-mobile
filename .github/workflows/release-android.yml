@@ -38,22 +38,28 @@ jobs:
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleRelease
 
-      - name: Rename APK for release
+      - name: Package APKs for release
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk \
+            autoconnecto-mobile.apk
+          cp autoconnecto-mobile.apk \
             "autoconnecto-mobile-${GITHUB_REF_NAME}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: autoconnecto-mobile-release-apk
-          path: autoconnecto-mobile-*.apk
+          path: |
+            autoconnecto-mobile.apk
+            autoconnecto-mobile-*.apk
 
       - name: Create GitHub Release (tag pushes)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: autoconnecto-mobile-*.apk
+          files: |
+            autoconnecto-mobile.apk
+            autoconnecto-mobile-*.apk
           name: Autoconnecto Mobile ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           generate_release_notes: false
@@ -63,7 +69,7 @@ jobs:
             Android APK for field monitoring: dashboards (charts + gauges), live telemetry, and alarms (ack/clear).
 
             ### Install on your phone
-            1. Download **`autoconnecto-mobile-*.apk`** (not a `.zip`).
+            1. Download **`autoconnecto-mobile.apk`** (stable name; always the latest build on this release).
             2. Open **Files** or **Downloads** and tap the APK (Chrome’s download chip often does not install).
             3. Allow **Install unknown apps** for Files/Chrome if prompted.
             4. If Play Protect warns, tap **Install anyway** / **More details** → **Install anyway**.
