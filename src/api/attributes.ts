@@ -9,10 +9,24 @@ export type DeviceAttribute = {
   updatedTs?: number;
 };
 
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (!error || typeof error !== "object") return fallback;
+  const err = error as {
+    response?: { data?: { message?: string | string[] } };
+    message?: string;
+  };
+  const raw = err.response?.data?.message;
+  if (Array.isArray(raw) && raw.length) return String(raw[0]);
+  if (typeof raw === "string" && raw.trim()) return raw;
+  if (err.message && !err.message.startsWith("API error")) return err.message;
+  return fallback;
+}
+
 export async function fetchDeviceAttributes(
   deviceId: string
 ): Promise<DeviceAttribute[]> {
-  const { data } = await api.get(`/devices/${deviceId}/attributes`);
+  const encodedId = encodeURIComponent(deviceId);
+  const { data } = await api.get(`/devices/${encodedId}/attributes`);
   if (!Array.isArray(data)) return [];
   return data.map((row: Record<string, unknown>) => ({
     key: String(row.key ?? ""),
@@ -32,9 +46,16 @@ export async function saveDeviceAttributes(
   scope: AttributeScope,
   attributes: Record<string, unknown>
 ) {
-  const { data } = await api.post(`/devices/${deviceId}/attributes`, {
-    scope,
-    attributes,
-  });
-  return data;
+  const encodedId = encodeURIComponent(deviceId);
+  try {
+    const { data } = await api.post(`/devices/${encodedId}/attributes`, {
+      scope: String(scope).toUpperCase(),
+      attributes,
+    });
+    return data;
+  } catch (error) {
+    throw new Error(
+      apiErrorMessage(error, "Failed to save device attributes")
+    );
+  }
 }

@@ -61,9 +61,14 @@ api.interceptors.response.use(
         )
       );
     }
-    return Promise.reject(
-      new Error(`API error ${status ?? "?"} on ${url ?? "request"}`)
-    );
+    const raw = error?.response?.data?.message;
+    const message =
+      Array.isArray(raw) && raw.length
+        ? String(raw[0])
+        : typeof raw === "string" && raw.trim()
+          ? raw
+          : `API error ${status ?? "?"} on ${url ?? "request"}`;
+    return Promise.reject(new Error(message));
   }
 );
 

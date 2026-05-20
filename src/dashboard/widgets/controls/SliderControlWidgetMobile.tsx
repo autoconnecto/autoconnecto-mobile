@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { saveDeviceAttributes } from "../../../api/attributes";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { saveDeviceAttributes, type AttributeScope } from "../../../api/attributes";
 import { WidgetLoading, WidgetMessage } from "../../components/WidgetState";
 import { WidgetShell } from "../../components/WidgetShell";
 import { useDeviceAttributes } from "../../hooks/useDeviceAttributes";
@@ -10,15 +10,31 @@ import {
 import { resolveControlDeviceId } from "../../utils/resolveControlDeviceId";
 import { clamp, toNumber } from "./controlUtils";
 
+function normalizeWriteScope(raw: unknown): AttributeScope {
+  const scope = String(raw || "SHARED").trim().toUpperCase();
+  if (scope === "CLIENT") return "CLIENT";
+  if (scope === "SERVER") return "SERVER";
+  return "SHARED";
+}
+
+function roundToStep(value: number, step: number, min: number, max: number) {
+  if (!Number.isFinite(step) || step <= 0) {
+    return clamp(value, min, max);
+  }
+  const steps = Math.round((value - min) / step);
+  return clamp(min + steps * step, min, max);
+}
+
 export function SliderControlWidgetMobile(props: MobileWidgetBindings) {
   const { config, title } = useMobileWidgetBindings(props);
   const widgetTitle = title || String(config.title || "Slider");
-  const key = String(config.key || "").trim();
+  const key = String(config.key || config.metric || config.telemetryKey || "").trim();
   const unit = String(config.unit || "");
   const min = Number(config.min ?? 0);
   const max = Number(config.max ?? 100);
   const step = Number(config.step ?? 1) || 1;
   const decimals = Math.max(0, Number(config.decimals ?? 1) || 0);
+  const writeScope = normalizeWriteScope(config.writeScope ?? config.scope);
 
   const deviceId = useMemo(
     () =>
@@ -35,21 +51,36 @@ export function SliderControlWidgetMobile(props: MobileWidgetBindings) {
   const [local, setLocal] = useState(min);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const localRef = useRef(min);
 
-  const attributeValue = key ? toNumber(getValue(key, ["SHARED", "CLIENT"])) : null;
+  const readScopes: AttributeScope[] =
+    writeScope === "SHARED" ? ["SHARED", "CLIENT"] : [writeScope, "SHARED", "CLIENT"];
+
+  const attributeValue = key
+    ? toNumber(getValue(key, readScopes))
+    : null;
 
   useEffect(() => {
     if (attributeValue === null) return;
-    setLocal(clamp(attributeValue, min, max));
-  }, [attributeValue, min, max, version]);
+    const next = roundToStep(attributeValue, step, min, max);
+    setLocal(next);
+    localRef.current = next;
+  }, [attributeValue, min, max, step, version]);
 
   async function commit(value: number) {
     if (!deviceId || !key) return;
-    const next = clamp(value, min, max);
+    const next = roundToStep(value, step, min, max);
+    if (!Number.isFinite(next)) {
+      setError("Invalid slider value");
+      return;
+    }
+
+    setLocal(next);
+    localRef.current = next;
     setPending(true);
     setError(null);
     try {
-      await saveDeviceAttributes(deviceId, "SHARED", { [key]: next });
+      await saveDeviceAttributes(deviceId, writeScope, { [key]: next });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -86,9 +117,13 @@ export function SliderControlWidgetMobile(props: MobileWidgetBindings) {
         step={step}
         value={local}
         disabled={pending}
-        onChange={(e) => setLocal(Number(e.target.value))}
-        onPointerUp={() => commit(local)}
-        onTouchEnd={() => commit(local)}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          setLocal(next);
+          localRef.current = next;
+        }}
+        onPointerUp={(e) => commit(Number(e.currentTarget.value))}
+        onTouchEnd={(e) => commit(Number(e.currentTarget.value))}
       />
       <div className="slider-range-labels">
         <span>{min}</span>
