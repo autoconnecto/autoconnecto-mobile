@@ -131,12 +131,12 @@ export type ResolvedWidgetConfig = {
   reason?: string;
 };
 
-export function resolveWidgetConfig(
+function resolveWidgetDeviceContext(
   widget: Record<string, unknown>,
   aliases: Record<string, unknown>[] = [],
   dashboard?: Record<string, unknown>,
   state?: Record<string, unknown>
-): ResolvedWidgetConfig {
+) {
   const normalized = normalizeWidgetConfig(widget);
   const aliasId = normalized.aliasId;
   const alias = aliasId
@@ -151,7 +151,7 @@ export function resolveWidgetConfig(
       .map((deviceId) =>
         resolveSpecialDeviceToken(deviceId, dashboard, state)
       )
-      .filter(Boolean)
+      .filter((id): id is string => Boolean(id))
   );
 
   const aliasDeviceIds = alias
@@ -163,8 +163,6 @@ export function resolveWidgetConfig(
     ...aliasDeviceIds,
   ]);
 
-  const metric = normalized.metric;
-  const metrics = normalized.telemetryKeys;
   const hasDashboardStateAlias =
     aliasType !== null && isDashboardStateAliasType(aliasType);
   const waitingForDashboardStateToken =
@@ -173,13 +171,51 @@ export function resolveWidgetConfig(
     hasDashboardStateAlias && aliasDeviceIds.length === 0;
   const waitingForEntity =
     waitingForDashboardStateToken || waitingForDashboardStateAlias;
+
+  return {
+    normalized,
+    aliasId,
+    aliasType,
+    deviceIds,
+    waitingForEntity,
+  };
+}
+
+export function resolveWidgetDevices(
+  widget: Record<string, unknown>,
+  aliases: Record<string, unknown>[] = [],
+  dashboard?: Record<string, unknown>,
+  state?: Record<string, unknown>
+) {
+  const ctx = resolveWidgetDeviceContext(widget, aliases, dashboard, state);
+  return {
+    deviceIds: ctx.deviceIds,
+    primaryDeviceId: ctx.deviceIds[0] || null,
+    waitingForEntity: ctx.waitingForEntity,
+    reason: ctx.waitingForEntity
+      ? "Select a device for this dashboard"
+      : undefined,
+  };
+}
+
+export function resolveWidgetConfig(
+  widget: Record<string, unknown>,
+  aliases: Record<string, unknown>[] = [],
+  dashboard?: Record<string, unknown>,
+  state?: Record<string, unknown>
+): ResolvedWidgetConfig {
+  const ctx = resolveWidgetDeviceContext(widget, aliases, dashboard, state);
+  const { normalized, aliasId, aliasType, deviceIds, waitingForEntity } = ctx;
+
+  const metric = normalized.metric;
+  const metrics = normalized.telemetryKeys;
   const hasAnyTelemetryIntent = !!metric || metrics.length > 0;
 
   if (!hasAnyTelemetryIntent) {
     return {
       status: "not_configured",
-      deviceIds: [],
-      primaryDeviceId: null,
+      deviceIds,
+      primaryDeviceId: deviceIds[0] || null,
       metric: null,
       metrics: [],
       aliasId,

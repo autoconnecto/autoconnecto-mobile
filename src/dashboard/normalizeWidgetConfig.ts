@@ -32,6 +32,9 @@ function collectConfigCollections(config: Record<string, unknown>): unknown[][] 
     getArrayCandidate(config, "channels"),
     getArrayCandidate(config, "controls"),
     getArrayCandidate(config, "actions"),
+    getArrayCandidate(config, "rows"),
+    getArrayCandidate(config, "fields"),
+    getArrayCandidate(config, "cells"),
   ].filter((collection) => collection.length > 0);
 }
 

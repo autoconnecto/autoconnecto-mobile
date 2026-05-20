@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useState } from "react";
 import { fetchAlarms, type AlarmRow } from "../api/alarms";
 import { type DeviceRow } from "../api/devices";
-import { formatValue, isDeviceActive } from "../utils/format";
+import { isDeviceActive } from "../utils/format";
 import { WidgetShell } from "./components/WidgetShell";
-import { useDeviceTelemetry } from "./useDeviceTelemetry";
 import { resolveWidgetConfig } from "./widgetResolver";
 import { BarChartWidgetMobile } from "./widgets/charts/BarChartWidget";
 import { DoughnutChartWidgetMobile } from "./widgets/charts/DoughnutChartWidget";
@@ -16,16 +15,23 @@ import {
   ControlWidgetMobile,
   isControlWidgetType,
 } from "./widgets/ControlWidgetMobile";
+import { DeviceDataCardWidgetMobile } from "./widgets/DeviceDataCardWidgetMobile";
+import { DeviceTableWidgetMobile } from "./widgets/DeviceTableWidgetMobile";
+import { MapLocationWidgetMobile } from "./widgets/MapLocationWidgetMobile";
+import { MetricsWidgetMobile } from "./widgets/MetricsWidgetMobile";
+import { PanelWidgetRouter } from "./widgets/PanelWidgetsMobile";
 import type { MobileWidgetBindings } from "./hooks/useMobileWidgetBindings";
-
-const CHART_WIDGET_TYPES = new Set([
-  "timeseries",
-  "multitimeseries",
-  "barChart",
-  "pieChart",
-  "doughnut",
-  "sparkline",
-]);
+import {
+  ALARM_WIDGET_TYPES,
+  CHART_WIDGET_TYPES,
+  DEVICE_DATA_TYPES,
+  GAUGE_WIDGET_TYPES,
+  mapChartType,
+  MAP_WIDGET_TYPES,
+  METRICS_WIDGET_TYPES,
+  PANEL_WIDGET_TYPES,
+} from "./widgetRoutes";
+import type { ComponentType } from "react";
 
 const CHART_WIDGET_COMPONENTS: Record<string, ComponentType<MobileWidgetBindings>> = {
   timeseries: TimeseriesChartWidget,
@@ -35,41 +41,6 @@ const CHART_WIDGET_COMPONENTS: Record<string, ComponentType<MobileWidgetBindings
   doughnut: DoughnutChartWidgetMobile,
   sparkline: SparklineChartWidget,
 };
-
-const ALARM_TYPES = new Set(["alarm", "deviceAlarm", "alarmSummary"]);
-const GAUGE_TYPES = new Set([
-  "gauge",
-  "multigauge",
-  "digitalRoundGauge",
-  "digitalVerticalBar",
-  "neonRoundGauge",
-  "neonVerticalBar",
-  "analogMeter",
-  "batteryIndicator",
-  "tankLevel",
-  "progressBar",
-  "signalStrength",
-]);
-const VALUE_TYPES = new Set([
-  "value",
-  "led",
-  "miniLed",
-  "kpiStatCard",
-  "trendDirection",
-  "deltaComparison",
-]);
-
-const WEB_PLACEHOLDER_TYPES = new Set([
-  "rangeChart",
-  "dualAxisChart",
-  "scatterTelemetry",
-  "radarTelemetry",
-  "ecgStrip",
-  "map",
-  "routeMap",
-  "deviceTable",
-  "navigationButton",
-]);
 
 type Props = MobileWidgetBindings & {
   devices: DeviceRow[];
@@ -129,7 +100,8 @@ export function MobileWidget({
     selectedDeviceId,
   };
 
-  const ChartComponent = CHART_WIDGET_COMPONENTS[type];
+  const chartType = mapChartType(type);
+  const ChartComponent = CHART_WIDGET_COMPONENTS[chartType];
   if (ChartComponent && CHART_WIDGET_TYPES.has(type)) {
     return <ChartComponent {...bindings} />;
   }
@@ -138,8 +110,24 @@ export function MobileWidget({
     return <ControlWidgetMobile {...bindings} />;
   }
 
-  if (GAUGE_TYPES.has(type) || VALUE_TYPES.has(type)) {
+  if (GAUGE_WIDGET_TYPES.has(type)) {
     return <GaugeWidgetMobile {...bindings} />;
+  }
+
+  if (PANEL_WIDGET_TYPES.has(type)) {
+    return <PanelWidgetRouter {...bindings} />;
+  }
+
+  if (MAP_WIDGET_TYPES.has(type)) {
+    return <MapLocationWidgetMobile {...bindings} />;
+  }
+
+  if (type === "deviceTable") {
+    return <DeviceTableWidgetMobile {...bindings} devices={devices} />;
+  }
+
+  if (DEVICE_DATA_TYPES.has(type)) {
+    return <DeviceDataCardWidgetMobile {...bindings} />;
   }
 
   const title = String(widget.name || widget.title || type);
@@ -173,7 +161,7 @@ export function MobileWidget({
     );
   }
 
-  if (ALARM_TYPES.has(type)) {
+  if (ALARM_WIDGET_TYPES.has(type)) {
     return (
       <MobileAlarmWidget
         title={title}
@@ -200,19 +188,25 @@ export function MobileWidget({
     );
   }
 
+  if (METRICS_WIDGET_TYPES.has(type) || resolved.status === "ready") {
+    return <MetricsWidgetMobile {...bindings} />;
+  }
+
   if (resolved.status === "not_configured") {
-    if (WEB_PLACEHOLDER_TYPES.has(type)) {
-      return (
-        <WidgetShell title={title}>
-          <p className="muted small">This widget is best viewed on the web app.</p>
-        </WidgetShell>
-      );
-    }
-    return null;
+    return (
+      <WidgetShell title={title}>
+        <p className="muted small">
+          Widget not configured for mobile. Check device alias and telemetry keys
+          in the web editor.
+        </p>
+      </WidgetShell>
+    );
   }
 
   return (
-    <MobileTelemetryWidget title={title} resolved={resolved} />
+    <WidgetShell title={title}>
+      <p className="muted small">Unable to render this widget on mobile.</p>
+    </WidgetShell>
   );
 }
 
@@ -257,58 +251,6 @@ function MobileAlarmWidget({
         alarms={alarms}
         limit={String(widget.type) === "alarmSummary" ? 8 : 5}
       />
-    </WidgetShell>
-  );
-}
-
-function MobileTelemetryWidget({
-  title,
-  resolved,
-}: {
-  title: string;
-  resolved: ReturnType<typeof resolveWidgetConfig>;
-}) {
-  const deviceId = resolved.primaryDeviceId;
-  const keys = resolved.metrics.length
-    ? resolved.metrics
-    : resolved.metric
-      ? [resolved.metric]
-      : [];
-  const telemetry = useDeviceTelemetry(deviceId, keys);
-
-  const rows = useMemo(() => {
-    return keys.map((key) => {
-      const point = telemetry[key];
-      return {
-        key,
-        value: point?.value,
-        ts: point?.ts,
-        live: point?.live,
-      };
-    });
-  }, [keys, telemetry]);
-
-  if (rows.length <= 1) {
-    return (
-      <WidgetShell title={title}>
-        <p className="muted small">Widget type not fully supported on mobile</p>
-      </WidgetShell>
-    );
-  }
-
-  return (
-    <WidgetShell title={title}>
-      <ul className="dash-metric-list">
-        {rows.map((row) => (
-          <li key={row.key}>
-            <span className="dash-metric-key">{row.key}</span>
-            <span className="dash-metric-value">
-              {formatValue(row.value)}
-              {row.live ? <span className="badge live">live</span> : null}
-            </span>
-          </li>
-        ))}
-      </ul>
     </WidgetShell>
   );
 }

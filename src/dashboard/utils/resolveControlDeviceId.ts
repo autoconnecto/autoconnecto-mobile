@@ -1,5 +1,5 @@
 import { DASHBOARD_STATE_DEVICE } from "./chartItems";
-import { resolveWidgetConfig } from "../widgetResolver";
+import { resolveWidgetDevices } from "../widgetResolver";
 
 export function resolveControlDeviceId(
   widget: Record<string, unknown>,
@@ -15,7 +15,7 @@ export function resolveControlDeviceId(
     selectedEntity: { id: selectedDeviceId },
   };
 
-  const resolved = resolveWidgetConfig(
+  const resolved = resolveWidgetDevices(
     widget,
     aliases,
     dashboardContext,
