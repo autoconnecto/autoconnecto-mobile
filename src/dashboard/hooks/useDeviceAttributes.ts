@@ -37,9 +37,21 @@ export function useDeviceAttributes(deviceId: string | null | undefined) {
     return attributeStore.getValue(deviceId, key, preferredScopes);
   }
 
+  function getScopedValue(scope: string, key: string) {
+    if (!deviceId) return undefined;
+    return attributeStore.getScopedValue(deviceId, scope, key);
+  }
+
+  function findAttribute(scope: string, key: string) {
+    if (!deviceId) return undefined;
+    return attributeStore.findAttribute(deviceId, scope, key);
+  }
+
   return {
     attributes,
     getValue,
+    getScopedValue,
+    findAttribute,
     loading,
     error,
     version,

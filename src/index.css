@@ -1041,6 +1041,115 @@ body {
   cursor: pointer;
 }
 
+.attr-pair-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.attr-pair-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attr-pair-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.attr-pair-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.attr-pair-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.attr-pair-keys {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.attr-pair-status {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.attr-pair-status.is-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.attr-pair-status.is-confirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.attr-pair-status.is-mismatch {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.attr-pair-row {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.attr-pair-req {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.attr-pair-ack {
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.attr-pair-ts {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.attr-pair-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.switch-row-status {
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.switch-row-pair {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
 .rpc-action-list {
   display: flex;
   flex-direction: column;

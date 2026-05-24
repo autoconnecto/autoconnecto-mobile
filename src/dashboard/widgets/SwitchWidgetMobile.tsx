@@ -8,6 +8,7 @@ import {
   useMobileWidgetBindings,
   type MobileWidgetBindings,
 } from "../hooks/useMobileWidgetBindings";
+import { getPairStatus, renderAttributeValue } from "../utils/attributePairUtils";
 import { resolveControlDeviceId } from "../utils/resolveControlDeviceId";
 
 export type SwitchItem = {
@@ -58,7 +59,7 @@ export function SwitchWidgetMobile(props: MobileWidgetBindings) {
     [props.widget, props.aliases, props.dashboardContext, props.selectedDeviceId]
   );
 
-  const { getValue, loading, version } = useDeviceAttributes(deviceId);
+  const { getScopedValue, loading, version } = useDeviceAttributes(deviceId);
   const [pending, setPending] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -68,9 +69,13 @@ export function SwitchWidgetMobile(props: MobileWidgetBindings) {
   }, [deviceId, items.length]);
 
   function readChecked(channel: number) {
-    const raw = getValue(channelKey(channel), ["CLIENT", "SHARED"]);
+    const raw = getScopedValue("CLIENT", channelKey(channel));
     if (raw === undefined) return false;
     return isTruthyAttributeValue(raw);
+  }
+
+  function readShared(channel: number) {
+    return getScopedValue("SHARED", channelKey(channel));
   }
 
   async function handleToggle(channel: number, nextOn: boolean) {
@@ -118,6 +123,9 @@ export function SwitchWidgetMobile(props: MobileWidgetBindings) {
         {items.map((item) => {
           const checked = readChecked(item.channel);
           const isPending = !!pending[item.channel];
+          const sharedVal = readShared(item.channel);
+          const clientVal = getScopedValue("CLIENT", channelKey(item.channel));
+          const status = getPairStatus(sharedVal, clientVal);
 
           return (
             <div key={item.id} className="switch-row">
@@ -125,10 +133,15 @@ export function SwitchWidgetMobile(props: MobileWidgetBindings) {
                 <span className="switch-row-title">
                   {item.label || `Ch ${item.channel}`}
                 </span>
-                <span
-                  className={`switch-state ${checked ? "on" : "off"}`}
-                >
+                <span className={`switch-state ${checked ? "on" : "off"}`}>
                   {checked ? "ON" : "OFF"}
+                </span>
+                <span className={`attr-pair-status is-${status.tone} switch-row-status`}>
+                  {status.text}
+                </span>
+                <span className="switch-row-pair muted small">
+                  Req {renderAttributeValue(sharedVal)} · Ack{" "}
+                  {renderAttributeValue(clientVal)}
                 </span>
               </div>
               <button
@@ -172,11 +185,11 @@ export function MiniSwitchWidgetMobile(props: MobileWidgetBindings) {
     [props.widget, props.aliases, props.dashboardContext, props.selectedDeviceId]
   );
 
-  const { getValue, loading, version } = useDeviceAttributes(deviceId);
+  const { getScopedValue, loading, version } = useDeviceAttributes(deviceId);
   const [pending, setPending] = useState<Record<number, boolean>>({});
 
   function readChecked(channel: number) {
-    const raw = getValue(channelKey(channel), ["CLIENT", "SHARED"]);
+    const raw = getScopedValue("CLIENT", channelKey(channel));
     if (raw === undefined) return false;
     return isTruthyAttributeValue(raw);
   }

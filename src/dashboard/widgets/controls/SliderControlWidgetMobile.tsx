@@ -47,17 +47,14 @@ export function SliderControlWidgetMobile(props: MobileWidgetBindings) {
     [props.widget, props.aliases, props.dashboardContext, props.selectedDeviceId]
   );
 
-  const { getValue, loading, version } = useDeviceAttributes(deviceId);
+  const { getScopedValue, loading, version } = useDeviceAttributes(deviceId);
   const [local, setLocal] = useState(min);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const localRef = useRef(min);
 
-  const readScopes: AttributeScope[] =
-    writeScope === "SHARED" ? ["SHARED", "CLIENT"] : [writeScope, "SHARED", "CLIENT"];
-
   const attributeValue = key
-    ? toNumber(getValue(key, readScopes))
+    ? toNumber(getScopedValue(writeScope, key))
     : null;
 
   useEffect(() => {

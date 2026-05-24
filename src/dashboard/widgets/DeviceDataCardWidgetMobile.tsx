@@ -80,7 +80,7 @@ export function DeviceDataCardWidgetMobile(props: MobileWidgetBindings) {
     enabled: !!deviceId && telemetryItems.length > 0,
   });
 
-  const { getValue, loading, version } = useDeviceAttributes(deviceId);
+  const { getScopedValue, loading, version } = useDeviceAttributes(deviceId);
   const [pending, setPending] = useState<string | null>(null);
 
   if (!deviceId) {
@@ -104,7 +104,7 @@ export function DeviceDataCardWidgetMobile(props: MobileWidgetBindings) {
           const telemetryRow = latest.items.find((r) => r.key === item.key);
           const attrValue =
             item.source === "attribute"
-              ? getValue(item.key, [item.scope])
+              ? getScopedValue(item.scope, item.key)
               : undefined;
           const value =
             item.source === "attribute" ? attrValue : telemetryRow?.value;

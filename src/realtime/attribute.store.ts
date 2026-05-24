@@ -79,6 +79,7 @@ class AttributeStore {
     socket.on("attribute_update", handleUpdate);
     socket.on("attribute_update_global", handleUpdate);
     socket.on("shared_attribute_update", handleUpdate);
+    socket.on("client_attribute_update", handleUpdate);
 
     socket.on("connect", () => {
       for (const [deviceId, count] of this.deviceRefCounts.entries()) {
@@ -177,18 +178,39 @@ class AttributeStore {
     return Array.from(map.values());
   }
 
-  getValue(deviceId: string, key: string, preferredScopes: string[] = ["CLIENT", "SHARED"]) {
+  findAttribute(
+    deviceId: string,
+    scope: string,
+    key: string
+  ): DeviceAttribute | undefined {
     const map = this.attributesByDevice.get(deviceId);
     if (!map) return undefined;
 
-    for (const scope of preferredScopes) {
-      const found = map.get(attributeKey(scope, key));
-      if (found) return found.value;
+    const wantedScope = normalizeScope(scope);
+    const wantedKey = key.toLowerCase();
+
+    for (const attr of map.values()) {
+      if (
+        normalizeScope(attr.scope) === wantedScope &&
+        attr.key.toLowerCase() === wantedKey
+      ) {
+        return attr;
+      }
     }
 
-    const normalizedKey = key.toLowerCase();
-    for (const attr of map.values()) {
-      if (attr.key.toLowerCase() === normalizedKey) {
+    return undefined;
+  }
+
+  getScopedValue(deviceId: string, scope: string, key: string): unknown {
+    return this.findAttribute(deviceId, scope, key)?.value;
+  }
+
+  getValue(deviceId: string, key: string, preferredScopes: string[] = ["CLIENT", "SHARED"]) {
+    const wantedKey = key.toLowerCase();
+
+    for (const scope of preferredScopes) {
+      const attr = this.findAttribute(deviceId, scope, key);
+      if (attr && attr.key.toLowerCase() === wantedKey) {
         return attr.value;
       }
     }
