@@ -9,6 +9,7 @@ export const CHART_WIDGET_TYPES = new Set([
   "sparkline",
   "dualAxisChart",
   "rangeChart",
+  "stateTimeline",
 ]);
 
 export const CONTROL_WIDGET_TYPES = new Set([
@@ -67,6 +68,7 @@ export const METRICS_WIDGET_TYPES = new Set([
   "indoorEnvironment",
   "mimicOverlay",
   "assetAdminTable",
+  "generatorMonitoring",
 ]);
 
 export const PANEL_WIDGET_TYPES = new Set([
@@ -82,5 +84,6 @@ export const DEVICE_DATA_TYPES = new Set(["deviceDataCard"]);
 
 export function mapChartType(type: string): string {
   if (type === "dualAxisChart" || type === "rangeChart") return "multitimeseries";
+  if (type === "stateTimeline") return "timeseries";
   return type;
 }

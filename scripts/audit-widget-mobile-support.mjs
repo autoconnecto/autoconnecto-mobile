@@ -1,61 +1,114 @@
+/**
+ * Ensures every frontend registry widget type has native mobile routing coverage.
+ * Run from autoconnecto-mobile/: npm run audit:widgets
+ */
+
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const registryPath = path.resolve(
-  "../frontend/src/features/dashboards/registry/widgetRegistry.ts"
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const mobileRoot = path.resolve(__dirname, "..");
+const repoRoot = path.resolve(mobileRoot, "..");
+
+const registryPath = path.join(
+  repoRoot,
+  "frontend/src/features/dashboards/registry/widgetRegistry.ts"
 );
+const routesPath = path.join(mobileRoot, "src/dashboard/widgetRoutes.ts");
 
-const routesPath = path.resolve("src/dashboard/widgetRoutes.ts");
-const mobilePath = path.resolve("src/dashboard/MobileWidget.tsx");
-
-const registry = fs.readFileSync(registryPath, "utf8");
-const routes = fs.readFileSync(routesPath, "utf8");
-const mobile = fs.readFileSync(mobilePath, "utf8");
-
-const manualKeys = [
-  ...registry.matchAll(/^\s{2}([a-zA-Z0-9]+):\s+withMeta/gm),
-].map((m) => m[1]);
-
-function extractSetFromFile(content, name) {
-  const re = new RegExp(`export const ${name} = new Set\\(\\[([\\s\\S]*?)\\]\\);`);
-  const m = content.match(re);
-  if (!m) return [];
-  return [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+function read(file) {
+  return fs.readFileSync(file, "utf8");
 }
 
-const CHART = extractSetFromFile(routes, "CHART_WIDGET_TYPES");
-const CONTROL = extractSetFromFile(routes, "CONTROL_WIDGET_TYPES");
-const GAUGE = extractSetFromFile(routes, "GAUGE_WIDGET_TYPES");
-const ALARM = extractSetFromFile(routes, "ALARM_WIDGET_TYPES");
-const METRICS = extractSetFromFile(routes, "METRICS_WIDGET_TYPES");
-const PANEL = extractSetFromFile(routes, "PANEL_WIDGET_TYPES");
-const MAP = extractSetFromFile(routes, "MAP_WIDGET_TYPES");
-const DEVICE_DATA = extractSetFromFile(routes, "DEVICE_DATA_TYPES");
+function extractRegistryTypes(registrySrc) {
+  const types = new Set();
+  const manualBlock = registrySrc.match(/const manualRegistry[\s\S]*?^};/m)?.[0];
+  if (manualBlock) {
+    for (const m of manualBlock.matchAll(/^\s+([a-zA-Z0-9_]+):\s+withMeta/gm)) {
+      types.add(m[1]);
+    }
+    for (const m of manualBlock.matchAll(
+      /^\s+([a-zA-Z0-9_]+):\s*\{\s*\n\s+type:\s*"([^"]+)"/gm
+    )) {
+      types.add(m[2]);
+    }
+  }
+  const widgetsDir = path.join(
+    repoRoot,
+    "frontend/src/features/dashboards/widgets"
+  );
+  if (fs.existsSync(widgetsDir)) {
+    for (const file of fs.readdirSync(widgetsDir)) {
+      if (!file.endsWith(".tsx")) continue;
+      const src = read(path.join(widgetsDir, file));
+      const typeMatch = src.match(/widgetDefinition[\s\S]*?\btype:\s*"([^"]+)"/);
+      if (typeMatch) types.add(typeMatch[1]);
+    }
+  }
+  return [...types].sort();
+}
+
+function extractSet(content, name) {
+  const re = new RegExp(
+    `export const ${name} = new Set\\(\\[([\\s\\S]*?)\\]\\);`
+  );
+  const m = content.match(re);
+  if (!m) return new Set();
+  return new Set([...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]));
+}
+
+const registry = read(registryPath);
+const routes = read(routesPath);
+const types = extractRegistryTypes(registry);
+
+const CHART = extractSet(routes, "CHART_WIDGET_TYPES");
+const CONTROL = extractSet(routes, "CONTROL_WIDGET_TYPES");
+const GAUGE = extractSet(routes, "GAUGE_WIDGET_TYPES");
+const ALARM = extractSet(routes, "ALARM_WIDGET_TYPES");
+const METRICS = extractSet(routes, "METRICS_WIDGET_TYPES");
+const PANEL = extractSet(routes, "PANEL_WIDGET_TYPES");
+const MAP = extractSet(routes, "MAP_WIDGET_TYPES");
+const DEVICE_DATA = extractSet(routes, "DEVICE_DATA_TYPES");
 
 const SPECIAL = new Set(["deviceCount", "deviceTable"]);
 
-function classify(type) {
-  if (SPECIAL.has(type)) return "full";
-  if (ALARM.includes(type)) return "alarms";
-  if (CHART.includes(type)) return "chart";
-  if (CONTROL.includes(type)) return "control";
-  if (GAUGE.includes(type)) return "gauge";
-  if (PANEL.includes(type)) return "panel";
-  if (MAP.includes(type)) return "map";
-  if (DEVICE_DATA.includes(type)) return "device-data-card";
-  if (METRICS.includes(type)) return "metrics-composite";
-  if (mobile.includes(`"${type}"`)) return "metrics-fallback";
-  return "metrics-fallback";
+function bucket(type) {
+  if (SPECIAL.has(type)) return "special";
+  if (CONTROL.has(type)) return "control";
+  if (CHART.has(type)) return "chart";
+  if (GAUGE.has(type)) return "gauge";
+  if (ALARM.has(type)) return "alarm";
+  if (MAP.has(type)) return "map";
+  if (PANEL.has(type)) return "panel";
+  if (DEVICE_DATA.has(type)) return "device-data";
+  if (METRICS.has(type)) return "metrics";
+  return null;
 }
 
-const rows = [...new Set(manualKeys)].sort().map((type) => ({
-  type,
-  mobile: classify(type),
-}));
-
+const rows = types.map((type) => ({ type, bucket: bucket(type) }));
+const missing = rows.filter((r) => !r.bucket);
 const summary = rows.reduce((acc, row) => {
-  acc[row.mobile] = (acc[row.mobile] || 0) + 1;
+  const key = row.bucket || "UNROUTED";
+  acc[key] = (acc[key] || 0) + 1;
   return acc;
 }, {});
 
-console.log(JSON.stringify({ total: rows.length, summary, rows }, null, 2));
+const json = process.argv.includes("--json");
+const report = { total: rows.length, summary, missing: missing.map((m) => m.type), rows };
+
+if (json) {
+  console.log(JSON.stringify(report, null, 2));
+} else {
+  console.log("Native mobile widget routing audit\n");
+  console.log(`Types: ${report.total}`);
+  console.log("Buckets:", summary);
+  if (missing.length) {
+    console.log("\nUNROUTED (add to widgetRoutes.ts):");
+    for (const row of missing) console.log(`  - ${row.type}`);
+    process.exit(1);
+  }
+  console.log("\nOK — every registry type has a mobile handler bucket.");
+}
+
+if (!json && missing.length) process.exit(1);
