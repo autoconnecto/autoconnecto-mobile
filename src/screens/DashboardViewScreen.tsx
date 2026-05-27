@@ -144,7 +144,10 @@ export function DashboardViewScreen({
 
           <div className="dash-widget-stack">
             {widgetRows.length === 0 ? (
-              <p className="muted center">No widgets in this state.</p>
+              <p className="muted center">
+                No widgets are enabled for mobile in this state. Configure
+                visibility in the web dashboard (Edit → Mobile layout).
+              </p>
             ) : (
               widgetRows.map(({ widget }) => {
                 const id = String(widget.widgetId || widget.id || Math.random());

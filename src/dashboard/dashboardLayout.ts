@@ -1,4 +1,5 @@
 import type { DashboardDetail } from "../api/dashboards";
+import { getWidgetId, sortWidgetsForMobileView } from "./widgetMobileLayout";
 
 export type WidgetRow = {
   widget: Record<string, unknown>;
@@ -20,28 +21,25 @@ export function getWidgetsForState(
       (w as Record<string, unknown>).dashboardStateId || "default"
     );
     return widgetState === stateId;
-  });
+  }) as Record<string, unknown>[];
 
-  const rows: WidgetRow[] = filtered.map((widget) => {
-    const w = widget as Record<string, unknown>;
-    const id = String(w.widgetId || w.id || "");
+  const ordered = sortWidgetsForMobileView(
+    filtered,
+    layout.map((item) => ({
+      i: String(item.i),
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+    }))
+  );
+
+  return ordered.map((widget) => {
+    const id = getWidgetId(widget);
     const layoutItem = layoutById.get(id);
     return {
-      widget: w,
-      layoutH: layoutItem?.h ?? Number(w.h) ?? 4,
+      widget,
+      layoutH: layoutItem?.h ?? Number(widget.h) ?? 4,
     };
   });
-
-  rows.sort((a, b) => {
-    const idA = String(a.widget.widgetId || a.widget.id || "");
-    const idB = String(b.widget.widgetId || b.widget.id || "");
-    const layA = layoutById.get(idA);
-    const layB = layoutById.get(idB);
-    const yA = layA?.y ?? 9999;
-    const yB = layB?.y ?? 9999;
-    if (yA !== yB) return yA - yB;
-    return (layA?.x ?? 0) - (layB?.x ?? 0);
-  });
-
-  return rows;
 }
