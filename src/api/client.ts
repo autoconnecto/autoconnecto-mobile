@@ -11,9 +11,7 @@ let tokenExp = 0;
 
 async function getToken() {
   const now = Date.now();
-  if (tokenCache && now < tokenExp) {
-    return tokenCache;
-  }
+  if (tokenCache && now < tokenExp) return tokenCache;
 
   const session = await fetchAuthSession();
   const token = session.tokens?.idToken?.toString();
@@ -21,7 +19,7 @@ async function getToken() {
     tokenCache = token;
     tokenExp = now + 5 * 60 * 1000;
   }
-  return token || null;
+  return token;
 }
 
 export function clearTokenCache() {
@@ -43,33 +41,5 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const status = error?.response?.status;
-    const url = error?.config?.url;
-    if (status === 401) {
-      return Promise.reject(
-        new Error("Session expired. Sign out and sign in again.")
-      );
-    }
-    if (!error?.response) {
-      return Promise.reject(
-        new Error(
-          `Cannot reach API (${API_BASE_URL}). Check network connection.`
-        )
-      );
-    }
-    const raw = error?.response?.data?.message;
-    const message =
-      Array.isArray(raw) && raw.length
-        ? String(raw[0])
-        : typeof raw === "string" && raw.trim()
-          ? raw
-          : `API error ${status ?? "?"} on ${url ?? "request"}`;
-    return Promise.reject(new Error(message));
-  }
-);
 
 export default api;

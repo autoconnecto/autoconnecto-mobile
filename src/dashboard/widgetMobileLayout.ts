@@ -1,13 +1,19 @@
 /**
- * Per-widget mobile visibility and ordering — mirrors frontend widgetMobileLayout.ts.
+ * Per-widget mobile visibility, order, and height — mirrors frontend widgetMobileLayout.ts.
  */
 
 export type WidgetMobileConfig = {
   show?: boolean;
   order?: number | null;
+  height?: number | null;
 };
 
 export type LayoutItem = { i: string; x?: number; y?: number; w?: number; h?: number };
+
+export const MOBILE_GRID_ROW_HEIGHT_PX = 70;
+export const DEFAULT_MOBILE_HEIGHT_ROWS = 4;
+export const MIN_MOBILE_HEIGHT_ROWS = 1;
+export const MAX_MOBILE_HEIGHT_ROWS = 20;
 
 export function getWidgetId(widget: Record<string, unknown>): string {
   return String(widget.widgetId || widget.id || "").trim();
@@ -24,6 +30,8 @@ export function readWidgetMobileConfig(
     show: m.show,
     order:
       m.order === undefined || m.order === null ? null : Number(m.order),
+    height:
+      m.height === undefined || m.height === null ? null : Number(m.height),
   };
 }
 
@@ -38,7 +46,35 @@ export function getWidgetMobileOrder(widget: Record<string, unknown>): number | 
   if (order === null || order === undefined || !Number.isFinite(order)) {
     return null;
   }
-  return order;
+  return Math.max(1, Math.round(order));
+}
+
+function clampMobileHeightRows(value: number): number {
+  return Math.min(
+    MAX_MOBILE_HEIGHT_ROWS,
+    Math.max(MIN_MOBILE_HEIGHT_ROWS, Math.round(value))
+  );
+}
+
+export function getWidgetMobileHeightRows(
+  widget: Record<string, unknown>,
+  layoutH?: number | null
+): number {
+  const { height } = readWidgetMobileConfig(widget);
+  if (height !== null && height !== undefined && Number.isFinite(height)) {
+    return clampMobileHeightRows(height);
+  }
+  if (layoutH !== null && layoutH !== undefined && Number.isFinite(layoutH) && layoutH > 0) {
+    return clampMobileHeightRows(layoutH);
+  }
+  return DEFAULT_MOBILE_HEIGHT_ROWS;
+}
+
+export function getWidgetMobileHeightPx(
+  widget: Record<string, unknown>,
+  layoutH?: number | null
+): number {
+  return getWidgetMobileHeightRows(widget, layoutH) * MOBILE_GRID_ROW_HEIGHT_PX;
 }
 
 function compareByDesktopLayout(

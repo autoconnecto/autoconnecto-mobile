@@ -145,21 +145,26 @@ export function DashboardViewScreen({
           <div className="dash-widget-stack">
             {widgetRows.length === 0 ? (
               <p className="muted center">
-                No widgets are enabled for mobile in this state. Configure
-                visibility in the web dashboard (Edit → Mobile layout).
+                No widgets are enabled for mobile in this state. Open widget
+                settings on the web dashboard and set Visible on mobile.
               </p>
             ) : (
-              widgetRows.map(({ widget }) => {
+              widgetRows.map(({ widget, minHeightPx }) => {
                 const id = String(widget.widgetId || widget.id || Math.random());
                 return (
-                  <MobileWidget
+                  <div
                     key={id}
-                    widget={widget}
-                    aliases={aliases}
-                    dashboardContext={dashboardContext}
-                    selectedDeviceId={selectedDeviceId}
-                    devices={devices}
-                  />
+                    className="dash-widget-stack__item"
+                    style={{ minHeight: minHeightPx }}
+                  >
+                    <MobileWidget
+                      widget={widget}
+                      aliases={aliases}
+                      dashboardContext={dashboardContext}
+                      selectedDeviceId={selectedDeviceId}
+                      devices={devices}
+                    />
+                  </div>
                 );
               })
             )}

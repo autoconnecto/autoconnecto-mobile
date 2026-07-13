@@ -1,9 +1,14 @@
 import type { DashboardDetail } from "../api/dashboards";
-import { getWidgetId, sortWidgetsForMobileView } from "./widgetMobileLayout";
+import {
+  getWidgetId,
+  getWidgetMobileHeightPx,
+  sortWidgetsForMobileView,
+} from "./widgetMobileLayout";
 
 export type WidgetRow = {
   widget: Record<string, unknown>;
   layoutH: number;
+  minHeightPx: number;
 };
 
 export function getWidgetsForState(
@@ -37,9 +42,11 @@ export function getWidgetsForState(
   return ordered.map((widget) => {
     const id = getWidgetId(widget);
     const layoutItem = layoutById.get(id);
+    const layoutH = layoutItem?.h ?? Number(widget.h) ?? 4;
     return {
       widget,
-      layoutH: layoutItem?.h ?? Number(widget.h) ?? 4,
+      layoutH,
+      minHeightPx: getWidgetMobileHeightPx(widget, layoutH),
     };
   });
 }
