@@ -1,13 +1,14 @@
 {
   "name": "autoconnecto-mobile",
   "private": true,
-  "version": "1.5.2",
+  "version": "1.5.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -p tsconfig.app.json --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "tsc -b --noEmit",
+    "lint": "tsc -p tsconfig.app.json --noEmit",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "cap:sync": "npm run build && npx cap sync",
     "cap:open:android": "npx cap open android"
   },
