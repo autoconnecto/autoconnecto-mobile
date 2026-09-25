@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getDeviceId, type DeviceRow } from "../api/devices";
 import { loadDeviceListWithStatus } from "../components/DevicePicker";
+import { deviceIdFromUrl } from "../navigation/deviceLink";
 import type { AlarmSeverityFilter } from "../utils/alarmFilters";
 import { AlarmsScreen } from "./AlarmsScreen";
 import { DeviceDetailScreen } from "./DeviceDetailScreen";
@@ -44,8 +45,38 @@ export function HomeScreen() {
   );
 
   function openDevice(deviceId: string) {
+    if (!deviceId) return;
+    setDetailDashboardId(null);
     setDetailDeviceId(deviceId);
+    setTab("home");
   }
+
+  useEffect(() => {
+    const openFromUrl = (url?: string | null) => {
+      if (!url) return;
+      const id = deviceIdFromUrl(url);
+      if (id) openDevice(id);
+    };
+
+    openFromUrl(window.location.href);
+
+    let removeListener: (() => void) | undefined;
+    import("@capacitor/app")
+      .then(({ App }) => {
+        App.getLaunchUrl()
+          .then((launch) => openFromUrl(launch?.url))
+          .catch(() => undefined);
+        const handle = App.addListener("appUrlOpen", (event) => {
+          openFromUrl(event.url);
+        });
+        removeListener = () => {
+          void handle.then((listener) => listener.remove());
+        };
+      })
+      .catch(() => undefined);
+
+    return () => removeListener?.();
+  }, []);
 
   function openAlarms(opts?: {
     severity?: AlarmSeverityFilter;
@@ -135,15 +166,7 @@ export function HomeScreen() {
             devices={devices}
             loading={devicesLoading}
             onOpenDevices={() => setTab("devices")}
-            onOpenAlarms={(opts) =>
-              openAlarms({
-                severity:
-                  opts?.severity === "critical" ||
-                  opts?.severity === "major"
-                    ? opts.severity
-                    : "all",
-              })
-            }
+            onOpenAlarms={() => openAlarms()}
             onOpenDevice={openDevice}
           />
         ) : null}

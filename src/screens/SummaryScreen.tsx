@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchAlarms } from "../api/alarms";
+import { fetchAlarms, type AlarmRow } from "../api/alarms";
 import {
   getDeviceId,
   getDeviceLabel,
   type DeviceRow,
 } from "../api/devices";
-import { countActiveAlarms } from "../utils/alarmFilters";
 import { formatTs, isDeviceActive } from "../utils/format";
 
 type Props = {
   devices: DeviceRow[];
   loading: boolean;
   onOpenDevices: () => void;
-  onOpenAlarms: (opts?: { severity?: "critical" | "major" }) => void;
+  onOpenAlarms: () => void;
   onOpenDevice: (deviceId: string) => void;
 };
 
@@ -24,19 +23,19 @@ export function SummaryScreen({
   onOpenDevice,
 }: Props) {
   const [alarmsLoading, setAlarmsLoading] = useState(true);
-  const [alarmCounts, setAlarmCounts] = useState({
-    active: 0,
-    critical: 0,
-    major: 0,
-  });
+  const [activeAlarms, setActiveAlarms] = useState<AlarmRow[]>([]);
 
   const loadAlarms = useCallback(async () => {
     setAlarmsLoading(true);
     try {
       const rows = await fetchAlarms();
-      setAlarmCounts(countActiveAlarms(rows));
+      setActiveAlarms(
+        rows.filter(
+          (row) => String(row.status || "").toUpperCase() === "ACTIVE"
+        )
+      );
     } catch {
-      setAlarmCounts({ active: 0, critical: 0, major: 0 });
+      setActiveAlarms([]);
     } finally {
       setAlarmsLoading(false);
     }
@@ -46,15 +45,8 @@ export function SummaryScreen({
     loadAlarms();
   }, [loadAlarms]);
 
-  const activeDevices = devices.filter((d) => isDeviceActive(d.status)).length;
-  const inactiveDevices = devices.length - activeDevices;
-
-  const recentDevices = [...devices]
-    .sort(
-      (a, b) =>
-        Number(b.lastActivityTs || 0) - Number(a.lastActivityTs || 0)
-    )
-    .slice(0, 5);
+  const live = devices.filter((d) => isDeviceActive(d.status));
+  const offline = devices.filter((d) => !isDeviceActive(d.status));
 
   return (
     <div className="screen tab-screen">
@@ -65,60 +57,86 @@ export function SummaryScreen({
           onClick={onOpenDevices}
           disabled={loading}
         >
-          <span className="stat-value">{loading ? "—" : devices.length}</span>
-          <span className="stat-label">Devices</span>
-          {!loading ? (
-            <span className="stat-sub">
-              {activeDevices} active · {inactiveDevices} inactive
-            </span>
-          ) : null}
+          <span className="stat-value">{loading ? "—" : live.length}</span>
+          <span className="stat-label">Live</span>
+          <span className="stat-sub">Devices seen recently</span>
+        </button>
+        <button
+          type="button"
+          className="stat-card"
+          onClick={onOpenDevices}
+          disabled={loading}
+        >
+          <span className="stat-value">{loading ? "—" : offline.length}</span>
+          <span className="stat-label">Offline</span>
+          <span className="stat-sub">No recent activity</span>
         </button>
         <button
           type="button"
           className="stat-card alarm-stat"
-          onClick={() => onOpenAlarms()}
+          onClick={onOpenAlarms}
           disabled={alarmsLoading}
         >
           <span className="stat-value">
-            {alarmsLoading ? "—" : alarmCounts.active}
+            {alarmsLoading ? "—" : activeAlarms.length}
           </span>
           <span className="stat-label">Active alarms</span>
-          {!alarmsLoading ? (
-            <span className="stat-sub">
-              {alarmCounts.critical} critical · {alarmCounts.major} major
-            </span>
-          ) : null}
+          <span className="stat-sub">Any device in your scope</span>
         </button>
       </div>
 
-      {!alarmsLoading && alarmCounts.critical > 0 ? (
-        <button
-          type="button"
-          className="banner critical"
-          onClick={() => onOpenAlarms({ severity: "critical" })}
-        >
-          {alarmCounts.critical} critical alarm
-          {alarmCounts.critical === 1 ? "" : "s"} — view
-        </button>
-      ) : null}
+      <section className="section">
+        <div className="section-head">
+          <h2 className="section-title">Active alarms</h2>
+          <button type="button" className="link-btn" onClick={onOpenAlarms}>
+            See all
+          </button>
+        </div>
+        {alarmsLoading ? <p className="muted">Loading alarms…</p> : null}
+        {!alarmsLoading && activeAlarms.length === 0 ? (
+          <p className="muted">No active alarms.</p>
+        ) : null}
+        <ul className="list-rows">
+          {activeAlarms.slice(0, 8).map((alarm) => (
+            <li key={alarm.alarm_id}>
+              <button
+                type="button"
+                className="list-row"
+                onClick={() =>
+                  alarm.device_id
+                    ? onOpenDevice(alarm.device_id)
+                    : onOpenAlarms()
+                }
+              >
+                <span className="list-row-body">
+                  <span className="list-row-title">
+                    {alarm.device_name || alarm.device_id || "Device"}
+                  </span>
+                  <span className="list-row-meta">
+                    {[alarm.severity, alarm.rule_name, alarm.triggerKey]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">Recent devices</h2>
-          <button
-            type="button"
-            className="link-btn"
-            onClick={onOpenDevices}
-          >
+          <h2 className="section-title">Devices</h2>
+          <button type="button" className="link-btn" onClick={onOpenDevices}>
             See all
           </button>
         </div>
         {loading ? <p className="muted">Loading devices…</p> : null}
-        {!loading && recentDevices.length === 0 ? (
+        {!loading && devices.length === 0 ? (
           <p className="muted">No devices in your scope.</p>
         ) : null}
         <ul className="list-rows">
-          {recentDevices.map((device) => {
+          {[...live, ...offline].slice(0, 8).map((device) => {
             const id = getDeviceId(device);
             const active = isDeviceActive(device.status);
             return (
@@ -133,11 +151,9 @@ export function SummaryScreen({
                     aria-hidden
                   />
                   <span className="list-row-body">
-                    <span className="list-row-title">
-                      {getDeviceLabel(device)}
-                    </span>
+                    <span className="list-row-title">{getDeviceLabel(device)}</span>
                     <span className="list-row-meta">
-                      {device.status || "unknown"}
+                      {active ? "Live" : "Offline"}
                       {device.lastActivityTs
                         ? ` · ${formatTs(device.lastActivityTs)}`
                         : ""}
