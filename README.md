@@ -44,14 +44,15 @@ Install from [GitHub Releases](https://github.com/autoconnecto/autoconnecto-mobi
 4. Allow **Install unknown apps** for Files when asked.
 5. If Play Protect warns, tap **Install anyway**.
 
-## v1.4 dashboard support (mobile)
+## v1.6 dashboard support (mobile)
 
 | Category | Widget types |
 |----------|----------------|
 | Charts | timeseries, multitimeseries, bar, pie, doughnut, sparkline |
-| Gauges / values | gauge family, tank, battery, signal, LED, KPI, multigauge |
+| Gauges / values | gauge family, tank, battery, signal, LED, KPI, multigauge, delta |
+| Analytics | kpiPeriodSummary, topN, thresholdBreach, alarmOpsAnalytics |
 | Alarms | alarm, deviceAlarm, alarmSummary |
-| Other | deviceCount; complex maps/tables → open on web |
+| Other | deviceCount; complex fleet panels → metrics + open on web |
 
 ## CI
 
