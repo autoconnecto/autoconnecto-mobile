@@ -48,6 +48,22 @@ export const ALARM_WIDGET_TYPES = new Set([
   "alarmSummary",
 ]);
 
+export const ANALYTICS_WIDGET_TYPES = new Set([
+  "kpiPeriodSummary",
+  "topN",
+  "thresholdBreach",
+  "alarmOpsAnalytics",
+]);
+
+export const COMPOSITE_PANEL_WIDGET_TYPES = new Set([
+  "stateTimeline",
+  "machineFleetRuntime",
+  "factoryFloor",
+  "generatorMonitoring",
+  "drillingMonitoring",
+  "poolWaterQuality",
+]);
+
 export const METRICS_WIDGET_TYPES = new Set([
   "statusPanel",
   "statusMatrix",
@@ -56,10 +72,8 @@ export const METRICS_WIDGET_TYPES = new Set([
   "processInstrument",
   "valvePosition",
   "deviceHealth",
-  "thresholdBreach",
   "anomalyInsights",
   "multiDeviceComparison",
-  "topN",
   "timeseriesTable",
   "scatterTelemetry",
   "radarTelemetry",

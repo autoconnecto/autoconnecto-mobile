@@ -23,7 +23,9 @@ import { PanelWidgetRouter } from "./widgets/PanelWidgetsMobile";
 import type { MobileWidgetBindings } from "./hooks/useMobileWidgetBindings";
 import {
   ALARM_WIDGET_TYPES,
+  ANALYTICS_WIDGET_TYPES,
   CHART_WIDGET_TYPES,
+  COMPOSITE_PANEL_WIDGET_TYPES,
   DEVICE_DATA_TYPES,
   GAUGE_WIDGET_TYPES,
   mapChartType,
@@ -32,6 +34,10 @@ import {
   PANEL_WIDGET_TYPES,
 } from "./widgetRoutes";
 import type { ComponentType } from "react";
+import {
+  AnalyticsWidgetMobile,
+  CompositePanelWidgetMobile,
+} from "./widgets/AnalyticsWidgetsMobile";
 
 const CHART_WIDGET_COMPONENTS: Record<string, ComponentType<MobileWidgetBindings>> = {
   timeseries: TimeseriesChartWidget,
@@ -112,6 +118,14 @@ export function MobileWidget({
 
   if (GAUGE_WIDGET_TYPES.has(type)) {
     return <GaugeWidgetMobile {...bindings} />;
+  }
+
+  if (ANALYTICS_WIDGET_TYPES.has(type)) {
+    return <AnalyticsWidgetMobile {...bindings} />;
+  }
+
+  if (COMPOSITE_PANEL_WIDGET_TYPES.has(type)) {
+    return <CompositePanelWidgetMobile {...bindings} />;
   }
 
   if (PANEL_WIDGET_TYPES.has(type)) {
