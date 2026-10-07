@@ -9,6 +9,7 @@ export const CHART_WIDGET_TYPES = new Set([
   "sparkline",
   "dualAxisChart",
   "rangeChart",
+  "heatmap",
 ]);
 
 export const CONTROL_WIDGET_TYPES = new Set([
@@ -18,6 +19,8 @@ export const CONTROL_WIDGET_TYPES = new Set([
   "sliderControl",
   "gpioControl",
   "attributeControlCard",
+  "attributeForm",
+  "timeWindowControl",
   "rpc",
 ]);
 
@@ -36,6 +39,7 @@ export const GAUGE_WIDGET_TYPES = new Set([
   "value",
   "led",
   "miniLed",
+  "dualColorLed",
   "kpiStatCard",
   "trendDirection",
   "deltaComparison",
@@ -62,6 +66,7 @@ export const COMPOSITE_PANEL_WIDGET_TYPES = new Set([
   "generatorMonitoring",
   "drillingMonitoring",
   "poolWaterQuality",
+  "floorPlanZones",
 ]);
 
 export const METRICS_WIDGET_TYPES = new Set([
@@ -85,9 +90,12 @@ export const METRICS_WIDGET_TYPES = new Set([
 
 export const PANEL_WIDGET_TYPES = new Set([
   "markdownPanel",
+  "htmlPanel",
   "imagePanel",
   "codeWidget",
   "navigationButton",
+  "videoPanel",
+  "hierarchyTree",
 ]);
 
 export const MAP_WIDGET_TYPES = new Set(["map", "routeMap", "markerPlacement"]);
