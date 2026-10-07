@@ -13,6 +13,7 @@ export type DeviceRow = {
   inactivityTimeoutMs?: number;
   profileId?: string;
   assetId?: string;
+  isSolutionDemo?: boolean;
 };
 
 function normalizeDevice(row: Record<string, unknown>): DeviceRow {
@@ -39,6 +40,7 @@ function normalizeDevice(row: Record<string, unknown>): DeviceRow {
           : undefined,
     profileId: row.profileId ? String(row.profileId) : undefined,
     assetId: row.assetId ? String(row.assetId) : undefined,
+    isSolutionDemo: Boolean(row.isSolutionDemo ?? row.is_solution_demo),
   };
 }
 
@@ -77,8 +79,14 @@ function parseDeviceList(data: unknown): DeviceRow[] {
     .filter((d) => getDeviceId(d).length > 0);
 }
 
-export async function fetchDevices(): Promise<DeviceRow[]> {
-  const { data } = await api.get("/devices");
+export async function fetchDevices(options?: {
+  includeSolutionDemo?: boolean;
+}): Promise<DeviceRow[]> {
+  const { data } = await api.get("/devices", {
+    params: options?.includeSolutionDemo
+      ? { includeSolutionDemo: true }
+      : undefined,
+  });
   return parseDeviceList(data);
 }
 

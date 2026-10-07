@@ -6,6 +6,10 @@ import {
   type AlarmRow,
 } from "../api/alarms";
 import { PullRefresh } from "../components/PullRefresh";
+import {
+  getShowSolutionSamples,
+  subscribeShowSolutionSamples,
+} from "../preferences/showSolutionSamples";
 import { getSocket } from "../realtime/socket";
 import {
   filterAlarms,
@@ -46,7 +50,9 @@ export function AlarmsScreen({
   const load = useCallback(async () => {
     setError("");
     try {
-      const rows = await fetchAlarms();
+      const rows = await fetchAlarms({
+        includeSolutionDemo: getShowSolutionSamples(),
+      });
       setAlarms(rows);
     } catch (err) {
       setError(
@@ -59,6 +65,10 @@ export function AlarmsScreen({
 
   useEffect(() => {
     load();
+    return subscribeShowSolutionSamples(() => {
+      setLoading(true);
+      void load();
+    });
   }, [load]);
 
   useEffect(() => {

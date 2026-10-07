@@ -4,6 +4,10 @@ import {
   type DashboardSummary,
 } from "../api/dashboards";
 import { PullRefresh } from "../components/PullRefresh";
+import {
+  getShowSolutionSamples,
+  subscribeShowSolutionSamples,
+} from "../preferences/showSolutionSamples";
 
 type Props = {
   onOpenDashboard: (dashboardId: string) => void;
@@ -17,7 +21,9 @@ export function DashboardListScreen({ onOpenDashboard }: Props) {
   const load = useCallback(async () => {
     setError("");
     try {
-      const rows = await fetchDashboards();
+      const rows = await fetchDashboards({
+        includeSolutionDemo: getShowSolutionSamples(),
+      });
       setDashboards(rows);
     } catch (err) {
       setError(
@@ -30,6 +36,10 @@ export function DashboardListScreen({ onOpenDashboard }: Props) {
 
   useEffect(() => {
     load();
+    return subscribeShowSolutionSamples(() => {
+      setLoading(true);
+      void load();
+    });
   }, [load]);
 
   return (

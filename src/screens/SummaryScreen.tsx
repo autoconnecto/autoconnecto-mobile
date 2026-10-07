@@ -5,6 +5,10 @@ import {
   getDeviceLabel,
   type DeviceRow,
 } from "../api/devices";
+import {
+  getShowSolutionSamples,
+  subscribeShowSolutionSamples,
+} from "../preferences/showSolutionSamples";
 import { formatTs, isDeviceActive } from "../utils/format";
 
 type Props = {
@@ -28,7 +32,9 @@ export function SummaryScreen({
   const loadAlarms = useCallback(async () => {
     setAlarmsLoading(true);
     try {
-      const rows = await fetchAlarms();
+      const rows = await fetchAlarms({
+        includeSolutionDemo: getShowSolutionSamples(),
+      });
       setActiveAlarms(
         rows.filter(
           (row) => String(row.status || "").toUpperCase() === "ACTIVE"
@@ -43,6 +49,9 @@ export function SummaryScreen({
 
   useEffect(() => {
     loadAlarms();
+    return subscribeShowSolutionSamples(() => {
+      void loadAlarms();
+    });
   }, [loadAlarms]);
 
   const live = devices.filter((d) => isDeviceActive(d.status));

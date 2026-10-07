@@ -21,8 +21,14 @@ function getDashboardId(row: Record<string, unknown>): string {
   return String(row.id ?? row.dashboardId ?? "").trim();
 }
 
-export async function fetchDashboards(): Promise<DashboardSummary[]> {
-  const { data } = await api.get("/dashboards");
+export async function fetchDashboards(options?: {
+  includeSolutionDemo?: boolean;
+}): Promise<DashboardSummary[]> {
+  const { data } = await api.get("/dashboards", {
+    params: options?.includeSolutionDemo
+      ? { includeSolutionDemo: true }
+      : undefined,
+  });
   const rows = Array.isArray(data) ? data : [];
   return rows
     .map((row) => {

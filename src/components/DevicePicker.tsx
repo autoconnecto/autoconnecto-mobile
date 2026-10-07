@@ -4,6 +4,7 @@ import {
   getDeviceLabel,
   type DeviceRow,
 } from "../api/devices";
+import { getShowSolutionSamples } from "../preferences/showSolutionSamples";
 
 type Props = {
   value: string;
@@ -40,7 +41,9 @@ export function DevicePicker({ value, onChange, devices, loading }: Props) {
 }
 
 export async function loadDeviceList(): Promise<DeviceRow[]> {
-  const list = await fetchDevices();
+  const list = await fetchDevices({
+    includeSolutionDemo: getShowSolutionSamples(),
+  });
   return list.filter((d) => getDeviceId(d).length > 0);
 }
 

@@ -89,7 +89,12 @@ export function DevicesListScreen({
                   aria-hidden
                 />
                 <span className="list-row-body">
-                  <span className="list-row-title">{getDeviceLabel(device)}</span>
+                  <span className="list-row-title">
+                    {getDeviceLabel(device)}
+                    {device.isSolutionDemo ? (
+                      <span className="chip-inline"> Demo</span>
+                    ) : null}
+                  </span>
                   <span className="list-row-meta">
                     {getDeviceType(device)} · {device.status || "unknown"}
                   </span>

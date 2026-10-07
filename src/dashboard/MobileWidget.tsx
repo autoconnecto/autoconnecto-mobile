@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchAlarms, type AlarmRow } from "../api/alarms";
 import { type DeviceRow } from "../api/devices";
+import { getShowSolutionSamples } from "../preferences/showSolutionSamples";
 import { isDeviceActive } from "../utils/format";
 import { WidgetShell } from "./components/WidgetShell";
 import { resolveWidgetConfig } from "./widgetResolver";
@@ -242,7 +243,7 @@ function MobileAlarmWidget({
   const deviceIds = resolved.deviceIds;
 
   useEffect(() => {
-    fetchAlarms()
+    fetchAlarms({ includeSolutionDemo: getShowSolutionSamples() })
       .then((rows) => {
         if (deviceIds.length === 0) {
           setAlarms(rows);

@@ -56,8 +56,14 @@ function parseAlarmList(data: unknown): AlarmRow[] {
     .filter((row) => row.alarm_id.length > 0);
 }
 
-export async function fetchAlarms(): Promise<AlarmRow[]> {
-  const { data } = await api.get("/alarms");
+export async function fetchAlarms(options?: {
+  includeSolutionDemo?: boolean;
+}): Promise<AlarmRow[]> {
+  const { data } = await api.get("/alarms", {
+    params: options?.includeSolutionDemo
+      ? { includeSolutionDemo: true }
+      : undefined,
+  });
   return parseAlarmList(data);
 }
 

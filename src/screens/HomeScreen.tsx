@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getDeviceId, type DeviceRow } from "../api/devices";
 import { loadDeviceListWithStatus } from "../components/DevicePicker";
 import { deviceIdFromUrl } from "../navigation/deviceLink";
+import {
+  getShowSolutionSamples,
+  setShowSolutionSamples,
+  subscribeShowSolutionSamples,
+} from "../preferences/showSolutionSamples";
 import type { AlarmSeverityFilter } from "../utils/alarmFilters";
 import { AlarmsScreen } from "./AlarmsScreen";
 import { DeviceDetailScreen } from "./DeviceDetailScreen";
@@ -19,6 +24,7 @@ export function HomeScreen() {
   const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [devicesError, setDevicesError] = useState("");
+  const [showDemos, setShowDemos] = useState(() => getShowSolutionSamples());
   const [detailDeviceId, setDetailDeviceId] = useState<string | null>(null);
   const [detailDashboardId, setDetailDashboardId] = useState<string | null>(
     null
@@ -27,7 +33,8 @@ export function HomeScreen() {
     useState<AlarmSeverityFilter>("all");
   const [alarmsDeviceId, setAlarmsDeviceId] = useState<string | undefined>();
 
-  useEffect(() => {
+  const reloadDevices = useCallback(() => {
+    setDevicesLoading(true);
     loadDeviceListWithStatus()
       .then(({ devices: list, error }) => {
         setDevicesError(error || "");
@@ -35,6 +42,12 @@ export function HomeScreen() {
       })
       .finally(() => setDevicesLoading(false));
   }, []);
+
+  useEffect(() => {
+    reloadDevices();
+  }, [reloadDevices, showDemos]);
+
+  useEffect(() => subscribeShowSolutionSamples(setShowDemos), []);
 
   const detailFallback = useMemo(
     () =>
@@ -121,9 +134,19 @@ export function HomeScreen() {
           <h1 className="app-title">Autoconnecto</h1>
           {email ? <p className="muted small">{email}</p> : null}
         </div>
-        <button type="button" className="btn small secondary" onClick={logout}>
-          Sign out
-        </button>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="btn small secondary"
+            onClick={() => setShowSolutionSamples(!showDemos)}
+            title="Show undeletable Solution demo inventory"
+          >
+            {showDemos ? "Hide demos" : "Show demos"}
+          </button>
+          <button type="button" className="btn small secondary" onClick={logout}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       <nav className="tab-bar">
