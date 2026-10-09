@@ -9,6 +9,7 @@ import {
   getShowSolutionSamples,
   subscribeShowSolutionSamples,
 } from "../preferences/showSolutionSamples";
+import { MeterList } from "../components/MeterList";
 import { formatTs, isDeviceActive } from "../utils/format";
 
 type Props = {
@@ -93,6 +94,12 @@ export function SummaryScreen({
           <span className="stat-sub">Any device in your scope</span>
         </button>
       </div>
+
+      <MeterList
+        devices={devices}
+        alarms={activeAlarms}
+        onOpenDevice={onOpenDevice}
+      />
 
       <section className="section">
         <div className="section-head">

@@ -7,6 +7,7 @@ import {
 } from "../api/alarms";
 import {
   fetchDevice,
+  fetchLatestTelemetry,
   getDeviceId,
   getDeviceLabel,
   getDeviceType,
@@ -14,6 +15,13 @@ import {
 } from "../api/devices";
 import { TelemetryList } from "../components/TelemetryList";
 import { getSocket } from "../realtime/socket";
+import { telemetryStore } from "../realtime/telemetry.store";
+import {
+  formatMeterNumber,
+  isEnergyMeter,
+  METER_KEYS,
+  readingsFromMap,
+} from "../utils/meterReadings";
 import { formatTs, isDeviceActive } from "../utils/format";
 
 type Props = {
@@ -45,10 +53,12 @@ export function DeviceDetailScreen({
   const [section, setSection] = useState<"info" | "telemetry" | "alarms">(
     "info"
   );
+  const [meterValues, setMeterValues] = useState<Record<string, unknown>>({});
 
   const load = useCallback(async () => {
     setError("");
     setLoading(true);
+    setAlarms([]);
     try {
       const [detail, deviceAlarms] = await Promise.all([
         fetchDevice(deviceId),
@@ -71,6 +81,30 @@ export function DeviceDetailScreen({
   }, [load]);
 
   useEffect(() => {
+    let cancelled = false;
+    fetchLatestTelemetry(deviceId)
+      .then((snapshot) => {
+        if (cancelled) return;
+        const next: Record<string, unknown> = {};
+        for (const key of METER_KEYS) {
+          if (snapshot[key]) next[key] = snapshot[key].value;
+        }
+        setMeterValues(next);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [deviceId]);
+
+  useEffect(() => {
+    return telemetryStore.subscribeToDevice(deviceId, (point) => {
+      if (!METER_KEYS.includes(point.key)) return;
+      setMeterValues((prev) => ({ ...prev, [point.key]: point.value }));
+    });
+  }, [deviceId]);
+
+  useEffect(() => {
     const socket = getSocket();
     const refresh = () => load();
     socket.on("alarm_update_global", refresh);
@@ -88,6 +122,9 @@ export function DeviceDetailScreen({
   const activeAlarms = alarms.filter(
     (a) => String(a.status || "").toUpperCase() !== "CLEARED"
   );
+  const openAlarm = activeAlarms[0];
+  const showMeter = device ? isEnergyMeter(device) : false;
+  const reading = readingsFromMap(meterValues);
 
   async function onAck(alarm: AlarmRow) {
     setBusyId(alarm.alarm_id);
@@ -124,6 +161,26 @@ export function DeviceDetailScreen({
           <p className="detail-meta muted small">{deviceId}</p>
         </div>
       </header>
+
+      {openAlarm ? (
+        <button
+          type="button"
+          className="meter-alarm-banner"
+          onClick={() => setSection("alarms")}
+        >
+          {[openAlarm.severity, openAlarm.rule_name || openAlarm.triggerKey]
+            .filter(Boolean)
+            .join(" · ") || "Open alarm"}
+        </button>
+      ) : null}
+
+      {showMeter ? (
+        <div className="meter-figures meter-figures-detail">
+          <span>{formatMeterNumber(reading.powerKw)} kW</span>
+          <span>{formatMeterNumber(reading.voltageV, 0)} V</span>
+          <span>{formatMeterNumber(reading.currentA)} A</span>
+        </div>
+      ) : null}
 
       {loading ? <p className="muted center tab-screen">Loading…</p> : null}
       {error ? <p className="error center tab-screen">{error}</p> : null}

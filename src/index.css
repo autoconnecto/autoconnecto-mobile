@@ -1280,3 +1280,32 @@ body {
   font-size: 0.95rem;
   margin: 0 0 10px;
 }
+
+.meter-figures {
+  display: flex;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.meter-figures-detail {
+  margin: 0 16px 8px;
+}
+
+.meter-alarm {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.meter-alarm-banner {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 8px;
+  text-align: left;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  color: var(--danger);
+  font-weight: 600;
+}

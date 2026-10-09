@@ -104,6 +104,23 @@ export type TelemetrySnapshot = Record<
   { value: unknown; ts: number }
 >;
 
+export async function fetchLatestForDevices(
+  deviceIds: string[],
+  keys: string[]
+): Promise<Array<{ deviceId: string; key: string; value: unknown }>> {
+  if (!deviceIds.length) return [];
+  const { data } = await api.post("/api/v1/telemetry/latest", {
+    deviceIds,
+    keys,
+  });
+  const items = Array.isArray(data?.items) ? data.items : [];
+  return items.map((item: { deviceId?: string; key?: string; value?: unknown }) => ({
+    deviceId: String(item.deviceId || ""),
+    key: String(item.key || ""),
+    value: item.value,
+  }));
+}
+
 export async function fetchLatestTelemetry(
   deviceId: string
 ): Promise<TelemetrySnapshot> {

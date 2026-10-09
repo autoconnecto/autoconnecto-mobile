@@ -28,6 +28,7 @@ export function LoginScreen() {
       <div className="login-card">
         <h1>Autoconnecto</h1>
         <p className="muted">Mobile monitoring</p>
+        <p className="muted small">v{__APP_VERSION__}</p>
         <form onSubmit={onSubmit} className="form">
           <label className="field">
             <span className="field-label">Email</span>

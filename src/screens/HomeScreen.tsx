@@ -132,6 +132,7 @@ export function HomeScreen() {
       <header className="app-header">
         <div>
           <h1 className="app-title">Autoconnecto</h1>
+          <p className="muted small">v{__APP_VERSION__}</p>
           {email ? <p className="muted small">{email}</p> : null}
         </div>
         <div className="header-actions">
@@ -139,7 +140,7 @@ export function HomeScreen() {
             type="button"
             className="btn small secondary"
             onClick={() => setShowSolutionSamples(!showDemos)}
-            title="Show undeletable Solution demo inventory"
+            title="Show solution demos"
           >
             {showDemos ? "Hide demos" : "Show demos"}
           </button>
