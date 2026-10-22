@@ -27,6 +27,22 @@ export function HomeScreen() {
   const [alarmsDeviceId, setAlarmsDeviceId] = useState<string | undefined>();
 
   useEffect(() => {
+    const hash = window.location.hash || "";
+    const alarm = hash.match(/alarm=([^&]+)/);
+    if (alarm) {
+      setTab("alarms");
+    }
+    const cap = (window as unknown as { Capacitor?: { Plugins?: { PushNotifications?: any } } }).Capacitor;
+    const push = cap?.Plugins?.PushNotifications;
+    if (push?.requestPermissions) {
+      void push.requestPermissions().then(() => push.register?.());
+      push.addListener?.("registration", (token: { value?: string }) => {
+        if (!token?.value) return;
+        void import("../api/client").then(({ default: api }) =>
+          api.post("/api/push-tokens", { token: token.value, platform: "android" })
+        );
+      });
+    }
     loadDeviceListWithStatus()
       .then(({ devices: list, error }) => {
         setDevicesError(error || "");

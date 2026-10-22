@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import api from "../api/client";
 import {
   getDeviceId,
   getDeviceLabel,
@@ -19,6 +20,8 @@ export function DevicesListScreen({
   onSelectDevice,
 }: Props) {
   const [query, setQuery] = useState("");
+  const [claimCode, setClaimCode] = useState("");
+  const [claimMessage, setClaimMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
     "all"
   );
@@ -53,6 +56,31 @@ export function DevicesListScreen({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+      </label>
+
+      <label className="field">
+        <span className="field-label">Claim code</span>
+        <input
+          className="input"
+          value={claimCode}
+          placeholder="Code from the QR, not the device token"
+          onChange={(e) => setClaimCode(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn"
+          onClick={() =>
+            void api
+              .post("/api/device-claims/redeem", { code: claimCode.trim() })
+              .then(() => setClaimMessage("Device claimed. The code is now dead."))
+              .catch((err) =>
+                setClaimMessage(err?.response?.data?.message || "Claim failed")
+              )
+          }
+        >
+          Claim
+        </button>
+        {claimMessage ? <span className="field-label">{claimMessage}</span> : null}
       </label>
 
       <div className="chip-row">
