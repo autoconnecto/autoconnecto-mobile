@@ -1,7 +1,7 @@
 {
   "name": "autoconnecto-mobile",
   "private": true,
-  "version": "1.7.68",
+  "version": "1.7.93",
   "type": "module",
   "scripts": {
     "dev": "vite",
