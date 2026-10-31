@@ -6,7 +6,8 @@ import {
   type AlarmRow,
 } from "../api/alarms";
 import { PullRefresh } from "../components/PullRefresh";
-import { getSocket } from "../realtime/socket";
+import { fetchDevices, getDeviceId } from "../api/devices";
+import { useDeviceAlarmRefresh } from "../realtime/useDeviceAlarmRefresh";
 import {
   filterAlarms,
   type AlarmListFilters,
@@ -61,16 +62,19 @@ export function AlarmsScreen({
     load();
   }, [load]);
 
+  const [scopedDeviceIds, setScopedDeviceIds] = useState<string[]>([]);
   useEffect(() => {
-    const socket = getSocket();
-    const refresh = () => load();
-    socket.on("alarm_update_global", refresh);
-    socket.on("alarm_update", refresh);
-    return () => {
-      socket.off("alarm_update_global", refresh);
-      socket.off("alarm_update", refresh);
-    };
-  }, [load]);
+    void fetchDevices()
+      .then((rows) => {
+        const ids = rows.map(getDeviceId).filter(Boolean);
+        setScopedDeviceIds(
+          deviceIdFilter ? ids.filter((id) => id === deviceIdFilter) : ids
+        );
+      })
+      .catch(() => setScopedDeviceIds(deviceIdFilter ? [deviceIdFilter] : []));
+  }, [deviceIdFilter]);
+
+  useDeviceAlarmRefresh(scopedDeviceIds, load);
 
   const filters: AlarmListFilters = useMemo(
     () => ({

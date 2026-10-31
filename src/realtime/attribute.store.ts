@@ -1,5 +1,6 @@
 import { fetchDeviceAttributes, type DeviceAttribute } from "../api/attributes";
 import { getSocket } from "./socket";
+import { retainDeviceRoom } from "./deviceRoom";
 
 type Listener = () => void;
 
@@ -50,7 +51,6 @@ function parseAttributeEvent(payload: unknown): {
 
 class AttributeStore {
   private initialized = false;
-  private deviceRefCounts = new Map<string, number>();
   private attributesByDevice = new Map<string, Map<string, DeviceAttribute>>();
   private listenersByDevice = new Map<string, Set<Listener>>();
 
@@ -80,14 +80,6 @@ class AttributeStore {
     socket.on("attribute_update_global", handleUpdate);
     socket.on("shared_attribute_update", handleUpdate);
     socket.on("client_attribute_update", handleUpdate);
-
-    socket.on("connect", () => {
-      for (const [deviceId, count] of this.deviceRefCounts.entries()) {
-        if (count > 0) {
-          socket.emit("subscribe_device", { deviceId });
-        }
-      }
-    });
   }
 
   private getDeviceMap(deviceId: string) {
@@ -142,11 +134,9 @@ class AttributeStore {
     }
     listeners.add(listener);
 
-    const current = this.deviceRefCounts.get(deviceId) ?? 0;
-    this.deviceRefCounts.set(deviceId, current + 1);
-
-    if (current === 0) {
-      getSocket().emit("subscribe_device", { deviceId });
+    const releaseRoom = retainDeviceRoom(deviceId);
+    const alreadyCached = this.attributesByDevice.has(deviceId);
+    if (!alreadyCached) {
       this.loadDevice(deviceId).catch(() => {
         this.notify(deviceId);
       });
@@ -159,16 +149,9 @@ class AttributeStore {
       set?.delete(listener);
       if (set && set.size === 0) {
         this.listenersByDevice.delete(deviceId);
-      }
-
-      const next = (this.deviceRefCounts.get(deviceId) ?? 1) - 1;
-      if (next <= 0) {
-        this.deviceRefCounts.delete(deviceId);
         this.attributesByDevice.delete(deviceId);
-        getSocket().emit("unsubscribe_device", { deviceId });
-      } else {
-        this.deviceRefCounts.set(deviceId, next);
       }
+      releaseRoom();
     };
   }
 

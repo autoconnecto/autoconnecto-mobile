@@ -1,4 +1,5 @@
 import { getSocket } from "./socket";
+import { retainDeviceRoom } from "./deviceRoom";
 
 export type LiveTelemetryPoint = {
   deviceId: string;
@@ -73,7 +74,6 @@ function normalizeTelemetryMessage(msg: unknown): LiveTelemetryPoint[] {
 
 class TelemetryStore {
   private initialized = false;
-  private deviceRefCounts = new Map<string, number>();
   private deviceListeners = new Map<string, Set<Listener>>();
   private globalListeners = new Set<Listener>();
 
@@ -98,14 +98,6 @@ class TelemetryStore {
 
     socket.on("telemetry_update", handleMessage);
     socket.on("telemetry_update_global", handleMessage);
-
-    socket.on("connect", () => {
-      for (const [deviceId, count] of this.deviceRefCounts.entries()) {
-        if (count > 0) {
-          socket.emit("subscribe_device", { deviceId });
-        }
-      }
-    });
   }
 
   subscribeToDevice(deviceId: string, listener: Listener) {
@@ -118,12 +110,7 @@ class TelemetryStore {
       this.deviceListeners.set(deviceId, listeners);
     }
     listeners.add(listener);
-
-    const current = this.deviceRefCounts.get(deviceId) ?? 0;
-    this.deviceRefCounts.set(deviceId, current + 1);
-    if (current === 0) {
-      getSocket().emit("subscribe_device", { deviceId });
-    }
+    const releaseRoom = retainDeviceRoom(deviceId);
 
     return () => {
       const set = this.deviceListeners.get(deviceId);
@@ -131,14 +118,7 @@ class TelemetryStore {
       if (set && set.size === 0) {
         this.deviceListeners.delete(deviceId);
       }
-
-      const next = (this.deviceRefCounts.get(deviceId) ?? 1) - 1;
-      if (next <= 0) {
-        this.deviceRefCounts.delete(deviceId);
-        getSocket().emit("unsubscribe_device", { deviceId });
-      } else {
-        this.deviceRefCounts.set(deviceId, next);
-      }
+      releaseRoom();
     };
   }
 

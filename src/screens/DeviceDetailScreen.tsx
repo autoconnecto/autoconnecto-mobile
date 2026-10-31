@@ -13,7 +13,7 @@ import {
   type DeviceRow,
 } from "../api/devices";
 import { TelemetryList } from "../components/TelemetryList";
-import { getSocket } from "../realtime/socket";
+import { useDeviceAlarmRefresh } from "../realtime/useDeviceAlarmRefresh";
 import { formatTs, isDeviceActive } from "../utils/format";
 
 type Props = {
@@ -70,18 +70,7 @@ export function DeviceDetailScreen({
     load();
   }, [load]);
 
-  useEffect(() => {
-    const socket = getSocket();
-    const refresh = () => load();
-    socket.on("alarm_update_global", refresh);
-    socket.on("alarm_update", refresh);
-    socket.on("device_status_update", refresh);
-    return () => {
-      socket.off("alarm_update_global", refresh);
-      socket.off("alarm_update", refresh);
-      socket.off("device_status_update", refresh);
-    };
-  }, [load]);
+  useDeviceAlarmRefresh(deviceId ? [deviceId] : [], load);
 
   const label = device ? getDeviceLabel(device) : deviceId;
   const active = isDeviceActive(device?.status);
