@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getDeviceId, type DeviceRow } from "../api/devices";
 import { loadDeviceListWithStatus } from "../components/DevicePicker";
+import { registerAlarmPush } from "../push/registerPush";
 import type { AlarmSeverityFilter } from "../utils/alarmFilters";
 import { AlarmsScreen } from "./AlarmsScreen";
 import { DeviceDetailScreen } from "./DeviceDetailScreen";
@@ -32,17 +33,13 @@ export function HomeScreen() {
     if (alarm) {
       setTab("alarms");
     }
-    const cap = (window as unknown as { Capacitor?: { Plugins?: { PushNotifications?: any } } }).Capacitor;
-    const push = cap?.Plugins?.PushNotifications;
-    if (push?.requestPermissions) {
-      void push.requestPermissions().then(() => push.register?.());
-      push.addListener?.("registration", (token: { value?: string }) => {
-        if (!token?.value) return;
-        void import("../api/client").then(({ default: api }) =>
-          api.post("/api/push-tokens", { token: token.value, platform: "android" })
-        );
-      });
-    }
+    void registerAlarmPush({
+      onOpenAlarm: () => {
+        setTab("alarms");
+        setDetailDeviceId(null);
+        setDetailDashboardId(null);
+      },
+    });
     loadDeviceListWithStatus()
       .then(({ devices: list, error }) => {
         setDevicesError(error || "");
