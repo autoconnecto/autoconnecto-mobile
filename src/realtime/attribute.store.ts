@@ -200,6 +200,11 @@ class AttributeStore {
 
     return undefined;
   }
+
+  /** Wipe cached attribute Maps on logout so scoped sessions do not leak. */
+  clear() {
+    this.attributesByDevice.clear();
+  }
 }
 
 export const attributeStore = new AttributeStore();

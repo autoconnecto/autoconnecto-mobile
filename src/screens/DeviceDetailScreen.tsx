@@ -41,6 +41,7 @@ export function DeviceDetailScreen({
   const [alarms, setAlarms] = useState<AlarmRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [accessDenied, setAccessDenied] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [section, setSection] = useState<"info" | "telemetry" | "alarms">(
     "info"
@@ -48,6 +49,7 @@ export function DeviceDetailScreen({
 
   const load = useCallback(async () => {
     setError("");
+    setAccessDenied(false);
     setLoading(true);
     try {
       const [detail, deviceAlarms] = await Promise.all([
@@ -56,7 +58,18 @@ export function DeviceDetailScreen({
       ]);
       setDevice(detail);
       setAlarms(deviceAlarms);
-    } catch (err) {
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === "object" && "response" in err
+          ? Number((err as { response?: { status?: number } }).response?.status)
+          : undefined;
+      if (status === 403) {
+        setAccessDenied(true);
+        setDevice(null);
+        setAlarms([]);
+        setError("No access — this device is outside your Access Scope");
+        return;
+      }
       setError(
         err instanceof Error ? err.message : "Failed to load device"
       );
@@ -72,7 +85,11 @@ export function DeviceDetailScreen({
 
   useDeviceAlarmRefresh(deviceId ? [deviceId] : [], load);
 
-  const label = device ? getDeviceLabel(device) : deviceId;
+  const label = accessDenied
+    ? "No access"
+    : device
+      ? getDeviceLabel(device)
+      : deviceId;
   const active = isDeviceActive(device?.status);
   const activeAlarms = alarms.filter(
     (a) => String(a.status || "").toUpperCase() !== "CLEARED"
@@ -110,14 +127,16 @@ export function DeviceDetailScreen({
         </button>
         <div className="detail-title-wrap">
           <h2 className="detail-title">{label}</h2>
-          <p className="detail-meta muted small">{deviceId}</p>
+          {!accessDenied ? (
+            <p className="detail-meta muted small">{deviceId}</p>
+          ) : null}
         </div>
       </header>
 
       {loading ? <p className="muted center tab-screen">Loading…</p> : null}
       {error ? <p className="error center tab-screen">{error}</p> : null}
 
-      {!loading && device ? (
+      {!loading && !accessDenied && device ? (
         <>
           <div className="chip-row section-tabs">
             {(

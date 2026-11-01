@@ -25,6 +25,10 @@ async function getToken() {
 export function clearTokenCache() {
   tokenCache = "";
   tokenExp = 0;
+  // Lazy import avoids circular init with realtime / attributes.
+  void import("../realtime/attribute.store")
+    .then((m) => m.attributeStore.clear())
+    .catch(() => undefined);
 }
 
 api.interceptors.request.use(async (config) => {
