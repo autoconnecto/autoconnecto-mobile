@@ -1,49 +1,43 @@
 import axios from "axios";
-import { fetchAuthSession } from "aws-amplify/auth";
 import { API_BASE_URL } from "../config/env";
+import { clearServerToken, readServerToken } from "../auth/localSession";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-let tokenCache = "";
-let tokenExp = 0;
-
-async function getToken() {
-  const now = Date.now();
-  if (tokenCache && now < tokenExp) return tokenCache;
-
-  const session = await fetchAuthSession();
-  const token = session.tokens?.idToken?.toString();
-  if (token) {
-    tokenCache = token;
-    tokenExp = now + 5 * 60 * 1000;
-  }
-  return token;
-}
-
 export function clearTokenCache() {
-  tokenCache = "";
-  tokenExp = 0;
   // Lazy import avoids circular init with realtime / attributes.
   void import("../realtime/attribute.store")
     .then((m) => m.attributeStore.clear())
     .catch(() => undefined);
 }
 
-api.interceptors.request.use(async (config) => {
+api.interceptors.request.use((config) => {
   let url = config.url || "";
   if (!url.startsWith("/api")) {
     url = "/api" + (url.startsWith("/") ? url : `/${url}`);
   }
   config.url = url;
 
-  const token = await getToken();
+  const token = readServerToken();
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err?.response?.status;
+    if (status === 401) {
+      clearServerToken();
+      clearTokenCache();
+    }
+    return Promise.reject(err);
+  }
+);
 
 export default api;

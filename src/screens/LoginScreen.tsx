@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../auth/AuthContext";
+import { APP_VERSION } from "../config/env";
 
 export function LoginScreen() {
   const { login } = useAuth();
@@ -25,7 +26,7 @@ export function LoginScreen() {
     <div className="screen center">
       <form className="card login-card" onSubmit={onSubmit}>
         <h1>Autoconnecto</h1>
-        <p className="muted">Sign in to your tenant</p>
+        <p className="muted">Sign in to your tenant · v{APP_VERSION}</p>
 
         <label className="field">
           <span>Email</span>

@@ -1,16 +1,11 @@
 import { io, Socket } from "socket.io-client";
-import { fetchAuthSession } from "aws-amplify/auth";
 import { WS_BASE_URL } from "../config/env";
+import { readServerToken } from "../auth/localSession";
 
 let socket: Socket | null = null;
 
-async function resolveSocketToken(): Promise<string | undefined> {
-  try {
-    const session = await fetchAuthSession();
-    return session.tokens?.idToken?.toString() || undefined;
-  } catch {
-    return undefined;
-  }
+function resolveSocketToken(): string | undefined {
+  return readServerToken() || undefined;
 }
 
 export function getSocket(): Socket {
@@ -22,15 +17,12 @@ export function getSocket(): Socket {
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       auth: (cb) => {
-        void resolveSocketToken()
-          .then((token) => {
-            if (!token) {
-              cb({});
-              return;
-            }
-            cb({ token });
-          })
-          .catch(() => cb({}));
+        const token = resolveSocketToken();
+        if (!token) {
+          cb({});
+          return;
+        }
+        cb({ token });
       },
     });
   }
@@ -47,4 +39,9 @@ export function disconnectSocket() {
     }
     socket = null;
   }
+}
+
+/** Drop unauthenticated singleton and reconnect with the local JWT after login. */
+export function resetSocket() {
+  disconnectSocket();
 }

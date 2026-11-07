@@ -1,9 +1,10 @@
 import { useAuth } from "./auth/AuthContext";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LoginScreen } from "./screens/LoginScreen";
+import { MustChangePasswordScreen } from "./screens/MustChangePasswordScreen";
 
 export default function App() {
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, mustChangePassword } = useAuth();
 
   if (loading) {
     return (
@@ -13,5 +14,13 @@ export default function App() {
     );
   }
 
-  return isAuthenticated ? <HomeScreen /> : <LoginScreen />;
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
+  if (mustChangePassword) {
+    return <MustChangePasswordScreen />;
+  }
+
+  return <HomeScreen />;
 }

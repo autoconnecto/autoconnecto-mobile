@@ -7,48 +7,69 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  fetchAuthSession,
-  getCurrentUser,
-  signIn,
-  signOut,
-} from "aws-amplify/auth";
+import axios from "axios";
 import { clearTokenCache } from "../api/client";
-import { disconnectSocket } from "../realtime/socket";
-import "./cognito";
+import api from "../api/client";
+import { API_BASE_URL } from "../config/env";
+import { disconnectSocket, resetSocket, getSocket } from "../realtime/socket";
+import {
+  clearServerToken,
+  emailFromJwt,
+  readServerToken,
+  saveServerToken,
+  stashTempPasswordForMustChange,
+  takeTempPasswordForMustChange,
+} from "./localSession";
 
 type AuthState = {
   loading: boolean;
   isAuthenticated: boolean;
+  mustChangePassword: boolean;
   email: string | null;
   login: (email: string, password: string) => Promise<void>;
+  completeMustChange: (newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
 
+function refreshSocketAfterAuth() {
+  resetSocket();
+  try {
+    getSocket();
+  } catch {
+    /* optional */
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    try {
-      await getCurrentUser();
-      const session = await fetchAuthSession();
-      if (session.tokens?.idToken) {
-        setIsAuthenticated(true);
-        const payload = session.tokens.idToken.payload as {
-          email?: string;
-        };
-        setEmail(payload.email ?? null);
-        return;
-      }
-    } catch {
-      /* not signed in */
+    const token = readServerToken();
+    if (!token) {
+      setIsAuthenticated(false);
+      setMustChangePassword(false);
+      setEmail(null);
+      return;
     }
-    setIsAuthenticated(false);
-    setEmail(null);
+    try {
+      const { data } = await api.get("/auth/me");
+      setIsAuthenticated(true);
+      setEmail(
+        String(data?.email || emailFromJwt(token) || "").toLowerCase() || null
+      );
+      setMustChangePassword(Boolean(data?.mustChangePassword));
+    } catch {
+      clearServerToken();
+      clearTokenCache();
+      setIsAuthenticated(false);
+      setMustChangePassword(false);
+      setEmail(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -57,24 +78,97 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (username: string, password: string) => {
-      await signIn({ username, password });
-      clearTokenCache();
+      const base = API_BASE_URL.replace(/\/$/, "");
+      try {
+        const { data } = await axios.post(`${base}/api/auth/login`, {
+          email: username,
+          password,
+        });
+        if (!data?.accessToken) throw new Error("Login failed");
+        saveServerToken(String(data.accessToken));
+        clearTokenCache();
+        refreshSocketAfterAuth();
+        if (data?.mustChangePassword) {
+          stashTempPasswordForMustChange(password);
+          setMustChangePassword(true);
+          setIsAuthenticated(true);
+          setEmail(username);
+          return;
+        }
+        setMustChangePassword(false);
+        await refresh();
+      } catch (err: any) {
+        const status = err?.response?.status;
+        const apiMessage = err?.response?.data?.message;
+        if (status === 401) {
+          throw new Error(
+            Array.isArray(apiMessage)
+              ? apiMessage.join(", ")
+              : apiMessage || "Incorrect email or password"
+          );
+        }
+        throw err instanceof Error ? err : new Error("Login failed");
+      }
+    },
+    [refresh]
+  );
+
+  const completeMustChange = useCallback(
+    async (newPassword: string) => {
+      const current = takeTempPasswordForMustChange();
+      if (!current) {
+        throw new Error("Sign in again with the temporary password first");
+      }
+      await api.post("/auth/change-password", {
+        currentPassword: current,
+        newPassword,
+      });
+      setMustChangePassword(false);
       await refresh();
     },
     [refresh]
   );
 
   const logout = useCallback(async () => {
-    await signOut();
+    const token = readServerToken();
+    if (token) {
+      try {
+        await axios.post(
+          `${API_BASE_URL.replace(/\/$/, "")}/api/auth/logout`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch {
+        /* still clear local */
+      }
+    }
+    clearServerToken();
     clearTokenCache();
     disconnectSocket();
     setIsAuthenticated(false);
+    setMustChangePassword(false);
     setEmail(null);
   }, []);
 
   const value = useMemo(
-    () => ({ loading, isAuthenticated, email, login, logout }),
-    [loading, isAuthenticated, email, login, logout]
+    () => ({
+      loading,
+      isAuthenticated,
+      mustChangePassword,
+      email,
+      login,
+      completeMustChange,
+      logout,
+    }),
+    [
+      loading,
+      isAuthenticated,
+      mustChangePassword,
+      email,
+      login,
+      completeMustChange,
+      logout,
+    ]
   );
 
   return (
