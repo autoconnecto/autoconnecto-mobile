@@ -10,6 +10,6 @@ export const AUTH_MODE =
 
 export const APP_ENV = import.meta.env.VITE_APP_ENV || "production";
 
-export const APP_VERSION = "1.8.2";
+export const APP_VERSION = "1.8.3";
 
 export const LAST_DEVICE_KEY = "autoconnecto.mobile.lastDeviceId";

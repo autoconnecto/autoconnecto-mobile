@@ -33,13 +33,14 @@ export function HomeScreen() {
     if (alarm) {
       setTab("alarms");
     }
+    // Push is off unless VITE_ENABLE_PUSH=true + google-services.json (see registerPush.ts).
     void registerAlarmPush({
       onOpenAlarm: () => {
         setTab("alarms");
         setDetailDeviceId(null);
         setDetailDashboardId(null);
       },
-    });
+    }).catch(() => undefined);
     loadDeviceListWithStatus()
       .then(({ devices: list, error }) => {
         setDevicesError(error || "");
