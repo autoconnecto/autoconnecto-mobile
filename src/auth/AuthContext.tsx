@@ -20,6 +20,7 @@ import {
   stashTempPasswordForMustChange,
   takeTempPasswordForMustChange,
 } from "./localSession";
+import { unregisterAlarmPush } from "../push/registerPush";
 
 type AuthState = {
   loading: boolean;
@@ -130,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    await unregisterAlarmPush().catch(() => undefined);
     const token = readServerToken();
     if (token) {
       try {

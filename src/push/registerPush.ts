@@ -5,6 +5,7 @@ import api from "../api/client";
 export type PushAlarmOpen = { alarmId?: string };
 
 let registered = false;
+let lastToken: string | null = null;
 
 /**
  * True only when the APK was built with Firebase (`google-services.json` +
@@ -13,6 +14,8 @@ let registered = false;
  * (Capacitor rethrows as RuntimeException on the plugin thread).
  *
  * Release CI currently has no google-services.json, so push stays off by default.
+ * Local dry-run on the API (`FCM_DRY_RUN=true`) still works if you POST a fake
+ * token via `/api/operations/push-tokens` without building an APK.
  */
 function pushEnabled(): boolean {
   return String(import.meta.env.VITE_ENABLE_PUSH || "").trim() === "true";
@@ -20,7 +23,7 @@ function pushEnabled(): boolean {
 
 /**
  * Register FCM token for the signed-in user (Android). No-op on web / when push disabled.
- * Delivery also needs FCM_SERVER_KEY on the API; without it alarms still store/mail.
+ * Delivery needs FCM credentials or FCM_DRY_RUN on the API; without them alarms still store/mail.
  */
 export async function registerAlarmPush(opts?: {
   onOpenAlarm?: (info: PushAlarmOpen) => void;
@@ -40,6 +43,7 @@ export async function registerAlarmPush(opts?: {
     await PushNotifications.addListener("registration", (token) => {
       const value = String(token?.value || "").trim();
       if (value.length < 20) return;
+      lastToken = value;
       void api
         .post("/push-tokens", { token: value, platform: "android" })
         .catch(() => undefined);
@@ -71,7 +75,15 @@ export async function registerAlarmPush(opts?: {
 export async function unregisterAlarmPush(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   if (!pushEnabled()) return;
+  const token = lastToken;
+  lastToken = null;
+  registered = false;
   try {
+    if (token) {
+      await api
+        .post("/push-tokens/remove", { token, platform: "android" })
+        .catch(() => undefined);
+    }
     const delivered = await PushNotifications.getDeliveredNotifications();
     if (delivered?.notifications?.length) {
       await PushNotifications.removeDeliveredNotifications(delivered);
@@ -79,5 +91,4 @@ export async function unregisterAlarmPush(): Promise<void> {
   } catch {
     /* ignore */
   }
-  registered = false;
 }
