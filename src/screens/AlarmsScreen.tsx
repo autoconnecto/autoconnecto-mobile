@@ -50,6 +50,7 @@ export function AlarmsScreen({
       const rows = await fetchAlarms();
       setAlarms(rows);
     } catch (err) {
+      if ((err as { isUnauthorized?: boolean })?.isUnauthorized) return;
       setError(
         err instanceof Error ? err.message : "Failed to load alarms"
       );

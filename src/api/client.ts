@@ -1,6 +1,7 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config/env";
 import { clearServerToken, readServerToken } from "../auth/localSession";
+import { notifyUnauthorized } from "../auth/sessionEvents";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -35,6 +36,11 @@ api.interceptors.response.use(
     if (status === 401) {
       clearServerToken();
       clearTokenCache();
+      // Drop React auth state so App shows LoginScreen — do not leave raw Axios text on dashboards/alarms.
+      notifyUnauthorized();
+      const sessionErr = new Error("Session expired. Sign in again.");
+      (sessionErr as Error & { isUnauthorized?: boolean }).isUnauthorized = true;
+      return Promise.reject(sessionErr);
     }
     return Promise.reject(err);
   }

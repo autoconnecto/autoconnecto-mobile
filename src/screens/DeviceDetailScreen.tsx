@@ -70,6 +70,7 @@ export function DeviceDetailScreen({
         setError("No access — this device is outside your Access Scope");
         return;
       }
+      if ((err as { isUnauthorized?: boolean })?.isUnauthorized) return;
       setError(
         err instanceof Error ? err.message : "Failed to load device"
       );

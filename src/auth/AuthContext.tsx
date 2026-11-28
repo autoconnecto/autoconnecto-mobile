@@ -20,6 +20,7 @@ import {
   stashTempPasswordForMustChange,
   takeTempPasswordForMustChange,
 } from "./localSession";
+import { onUnauthorized } from "./sessionEvents";
 import { unregisterAlarmPush } from "../push/registerPush";
 
 type AuthState = {
@@ -76,6 +77,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
+
+  // API 401 → clear session and show LoginScreen (no refresh-token route today).
+  useEffect(() => {
+    return onUnauthorized(() => {
+      void unregisterAlarmPush().catch(() => undefined);
+      clearServerToken();
+      clearTokenCache();
+      disconnectSocket();
+      setIsAuthenticated(false);
+      setMustChangePassword(false);
+      setEmail(null);
+    });
+  }, []);
 
   const login = useCallback(
     async (username: string, password: string) => {

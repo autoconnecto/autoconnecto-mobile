@@ -20,6 +20,7 @@ export function DashboardListScreen({ onOpenDashboard }: Props) {
       const rows = await fetchDashboards();
       setDashboards(rows);
     } catch (err) {
+      if ((err as { isUnauthorized?: boolean })?.isUnauthorized) return;
       setError(
         err instanceof Error ? err.message : "Failed to load dashboards"
       );
