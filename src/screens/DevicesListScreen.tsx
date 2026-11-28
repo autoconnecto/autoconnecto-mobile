@@ -12,12 +12,14 @@ type Props = {
   devices: DeviceRow[];
   loading: boolean;
   onSelectDevice: (deviceId: string) => void;
+  onDevicesChanged?: () => void;
 };
 
 export function DevicesListScreen({
   devices,
   loading,
   onSelectDevice,
+  onDevicesChanged,
 }: Props) {
   const [query, setQuery] = useState("");
   const [claimCode, setClaimCode] = useState("");
@@ -72,7 +74,10 @@ export function DevicesListScreen({
           onClick={() =>
             void api
               .post("/api/device-claims/redeem", { code: claimCode.trim() })
-              .then(() => setClaimMessage("Device claimed. The code is now dead."))
+              .then(() => {
+                setClaimMessage("Device claimed. The code is now dead.");
+                onDevicesChanged?.();
+              })
               .catch((err) =>
                 setClaimMessage(err?.response?.data?.message || "Claim failed")
               )
