@@ -1,10 +1,13 @@
 const TOKEN_KEY = "autoconnecto_server_token";
-const TEMP_PASSWORD_KEY = "autoconnecto.mobile.mustChangeTemp";
+const REFRESH_KEY = "autoconnecto_refresh_token";
+const REMEMBER_KEY = "autoconnecto_remember_me";
 
-/** E2E / server-package uses local JWT (AUTH_MODE=local). AWS Cognito is retired. */
-export function isServerInstall(): boolean {
-  const mode = String(import.meta.env.VITE_AUTH_MODE || "local").trim();
-  return mode === "local" || mode === "";
+export function isRememberMeEnabled(): boolean {
+  try {
+    return localStorage.getItem(REMEMBER_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 export function readServerToken(): string | null {
@@ -16,33 +19,40 @@ export function readServerToken(): string | null {
   }
 }
 
-export function saveServerToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+export function readRefreshToken(): string | null {
+  try {
+    const t = localStorage.getItem(REFRESH_KEY);
+    return t && t.length >= 32 ? t : null;
+  } catch {
+    return null;
+  }
 }
 
-export function clearServerToken() {
+export function saveServerToken(
+  token: string,
+  opts?: { rememberMe?: boolean; refreshToken?: string | null }
+) {
+  const rememberMe = opts?.rememberMe === true;
   try {
-    localStorage.removeItem(TOKEN_KEY);
+    localStorage.setItem(REMEMBER_KEY, rememberMe ? "1" : "0");
+    localStorage.setItem(TOKEN_KEY, token);
+    if (rememberMe && opts?.refreshToken) {
+      localStorage.setItem(REFRESH_KEY, String(opts.refreshToken));
+    } else {
+      localStorage.removeItem(REFRESH_KEY);
+    }
   } catch {
     /* private mode */
   }
 }
 
-export function stashTempPasswordForMustChange(password: string) {
+export function clearServerToken() {
   try {
-    sessionStorage.setItem(TEMP_PASSWORD_KEY, password);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
   } catch {
-    /* ignore */
-  }
-}
-
-export function takeTempPasswordForMustChange(): string {
-  try {
-    const v = sessionStorage.getItem(TEMP_PASSWORD_KEY) || "";
-    sessionStorage.removeItem(TEMP_PASSWORD_KEY);
-    return v;
-  } catch {
-    return "";
+    /* private mode */
   }
 }
 
@@ -51,15 +61,25 @@ export function emailFromJwt(token: string | null): string | null {
   try {
     const part = token.split(".")[1];
     if (!part) return null;
-    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4;
-    const padded = pad ? b64 + "=".repeat(4 - pad) : b64;
-    const json = JSON.parse(atob(padded)) as {
-      email?: string;
-      preferred_username?: string;
-    };
-    return json.email || json.preferred_username || null;
+    const json = JSON.parse(
+      atob(part.replace(/-/g, "+").replace(/_/g, "/"))
+    );
+    const email = json?.email || json?.username || null;
+    return email ? String(email).toLowerCase() : null;
   } catch {
     return null;
   }
+}
+
+/** In-memory only — temporary password for must-change flow after login. */
+let pendingTempPassword: string | null = null;
+
+export function stashTempPasswordForMustChange(password: string) {
+  pendingTempPassword = password;
+}
+
+export function takeTempPasswordForMustChange(): string | null {
+  const value = pendingTempPassword;
+  pendingTempPassword = null;
+  return value;
 }

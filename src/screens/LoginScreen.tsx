@@ -6,6 +6,7 @@ export function LoginScreen() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -14,7 +15,7 @@ export function LoginScreen() {
     setError("");
     setBusy(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login(email.trim().toLowerCase(), password, { rememberMe });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -48,6 +49,23 @@ export function LoginScreen() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+        </label>
+
+        <label
+          className="field"
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+          />
+          <span>Remember me</span>
         </label>
 
         {error ? <p className="error">{error}</p> : null}

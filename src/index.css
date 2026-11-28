@@ -29,6 +29,18 @@ body {
   background: var(--bg);
 }
 
+/* In-app camera QR scan: keep WebView transparent so ML Kit camera shows through. */
+body.barcode-scanner-active {
+  background: transparent;
+  --bg: transparent;
+}
+
+body.barcode-scanner-active #root,
+body.barcode-scanner-active .screen {
+  background: transparent;
+  visibility: hidden;
+}
+
 #root {
   min-height: 100vh;
 }
@@ -205,6 +217,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.alarm-highlight {
+  outline: 2px solid #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.2);
 }
 
 .card {

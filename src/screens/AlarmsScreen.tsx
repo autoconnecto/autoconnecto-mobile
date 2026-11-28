@@ -19,6 +19,9 @@ import { formatTs } from "../utils/format";
 type Props = {
   initialSeverity?: AlarmSeverityFilter;
   deviceIdFilter?: string;
+  /** From push tap / deep link — open Alarms on this row. */
+  highlightAlarmId?: string;
+  onHighlightConsumed?: () => void;
 };
 
 function severityClass(severity?: string) {
@@ -32,6 +35,8 @@ function severityClass(severity?: string) {
 export function AlarmsScreen({
   initialSeverity = "all",
   deviceIdFilter,
+  highlightAlarmId,
+  onHighlightConsumed,
 }: Props) {
   const [alarms, setAlarms] = useState<AlarmRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,10 +44,30 @@ export function AlarmsScreen({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [severity, setSeverity] = useState<AlarmSeverityFilter>(initialSeverity);
   const [status, setStatus] = useState<AlarmStatusFilter>("active");
+  const [flashId, setFlashId] = useState<string | undefined>();
 
   useEffect(() => {
     setSeverity(initialSeverity);
   }, [initialSeverity]);
+
+  useEffect(() => {
+    const id = String(highlightAlarmId || "").trim();
+    if (!id) return;
+    setStatus("all");
+    setSeverity("all");
+    setFlashId(id);
+    onHighlightConsumed?.();
+  }, [highlightAlarmId, onHighlightConsumed]);
+
+  useEffect(() => {
+    if (!flashId || loading) return;
+    const el = document.getElementById(`alarm-${flashId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const t = window.setTimeout(() => setFlashId(undefined), 4000);
+    return () => window.clearTimeout(t);
+  }, [flashId, loading, alarms]);
 
   const load = useCallback(async () => {
     setError("");
@@ -183,8 +208,13 @@ export function AlarmsScreen({
         {visible.map((alarm) => {
           const busy = busyId === alarm.alarm_id;
           const acknowledged = Boolean(alarm.acknowledged);
+          const highlighted = flashId === alarm.alarm_id;
           return (
-            <li key={alarm.alarm_id} className="card alarm-card">
+            <li
+              key={alarm.alarm_id}
+              id={`alarm-${alarm.alarm_id}`}
+              className={`card alarm-card${highlighted ? " alarm-highlight" : ""}`}
+            >
               <div className="card-row">
                 <span className={`badge ${severityClass(alarm.severity)}`}>
                   {alarm.severity || "alarm"}

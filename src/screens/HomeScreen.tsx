@@ -26,28 +26,36 @@ export function HomeScreen() {
   const [alarmsSeverity, setAlarmsSeverity] =
     useState<AlarmSeverityFilter>("all");
   const [alarmsDeviceId, setAlarmsDeviceId] = useState<string | undefined>();
+  const [highlightAlarmId, setHighlightAlarmId] = useState<string | undefined>();
 
   useEffect(() => {
     const hash = window.location.hash || "";
     const alarm = hash.match(/alarm=([^&]+)/);
-    if (alarm) {
+    if (alarm?.[1]) {
+      setHighlightAlarmId(decodeURIComponent(alarm[1]));
       setTab("alarms");
     }
     // Push is off unless VITE_ENABLE_PUSH=true + google-services.json (see registerPush.ts).
     void registerAlarmPush({
-      onOpenAlarm: () => {
+      onOpenAlarm: ({ alarmId }) => {
+        if (alarmId) setHighlightAlarmId(alarmId);
         setTab("alarms");
         setDetailDeviceId(null);
         setDetailDashboardId(null);
       },
     }).catch(() => undefined);
+    void reloadDevices();
+  }, []);
+
+  function reloadDevices() {
+    setDevicesLoading(true);
     loadDeviceListWithStatus()
       .then(({ devices: list, error }) => {
         setDevicesError(error || "");
         setDevices(list);
       })
       .finally(() => setDevicesLoading(false));
-  }, []);
+  }
 
   const detailFallback = useMemo(
     () =>
@@ -166,6 +174,7 @@ export function HomeScreen() {
             devices={devices}
             loading={devicesLoading}
             onSelectDevice={openDevice}
+            onDevicesChanged={reloadDevices}
           />
         ) : null}
         {tab === "dashboards" ? (
@@ -180,6 +189,8 @@ export function HomeScreen() {
           <AlarmsScreen
             initialSeverity={alarmsSeverity}
             deviceIdFilter={alarmsDeviceId}
+            highlightAlarmId={highlightAlarmId}
+            onHighlightConsumed={() => setHighlightAlarmId(undefined)}
           />
         ) : null}
       </main>

@@ -15,6 +15,7 @@ import { disconnectSocket, resetSocket, getSocket } from "../realtime/socket";
 import {
   clearServerToken,
   emailFromJwt,
+  readRefreshToken,
   readServerToken,
   saveServerToken,
   stashTempPasswordForMustChange,
@@ -28,7 +29,11 @@ type AuthState = {
   isAuthenticated: boolean;
   mustChangePassword: boolean;
   email: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    opts?: { rememberMe?: boolean }
+  ) => Promise<void>;
   completeMustChange: (newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -78,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
 
-  // API 401 → clear session and show LoginScreen (no refresh-token route today).
+  // API 401 after failed refresh → LoginScreen.
   useEffect(() => {
     return onUnauthorized(() => {
       void unregisterAlarmPush().catch(() => undefined);
@@ -92,15 +97,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (username: string, password: string) => {
+    async (
+      username: string,
+      password: string,
+      opts?: { rememberMe?: boolean }
+    ) => {
       const base = API_BASE_URL.replace(/\/$/, "");
+      const rememberMe = opts?.rememberMe === true;
       try {
         const { data } = await axios.post(`${base}/api/auth/login`, {
           email: username,
           password,
+          rememberMe,
         });
         if (!data?.accessToken) throw new Error("Login failed");
-        saveServerToken(String(data.accessToken));
+        saveServerToken(String(data.accessToken), {
+          rememberMe,
+          refreshToken: data.refreshToken ? String(data.refreshToken) : null,
+        });
         clearTokenCache();
         refreshSocketAfterAuth();
         if (data?.mustChangePassword) {
@@ -147,11 +161,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await unregisterAlarmPush().catch(() => undefined);
     const token = readServerToken();
+    const refreshToken = readRefreshToken();
     if (token) {
       try {
         await axios.post(
           `${API_BASE_URL.replace(/\/$/, "")}/api/auth/logout`,
-          {},
+          refreshToken ? { refreshToken } : {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } catch {
