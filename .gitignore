@@ -2,6 +2,9 @@ node_modules/
 .expo/
 dist/
 android/
+# Keep Firebase client config for CI APK builds (not the server service-account JSON).
+!android/app/
+!android/app/google-services.json
 ios/
 *.jks
 *.p8

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "954010646685",
+    "project_id": "autoconnecto-6b15c",
+    "storage_bucket": "autoconnecto-6b15c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:954010646685:android:f9af76b9e8cab92890bc74",
+        "android_client_info": {
+          "package_name": "in.autoconnecto.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH_exVg2GhBAhc2c6OTqgID11klKqERpM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
